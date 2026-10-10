@@ -4,11 +4,11 @@
   engine aborts with "Processing non-Unicode TrueType font" on both.
 - Arial's replacement: with --liberation <dir>, Liberation Sans Bold (SIL OFL, metric-compatible
   with Arial) loaded from a file, which goes through the engine's GDI+ file-font path like the
-  game's own A&A.TTF. Without it, the system font Tahoma, which the engine draws through a path
-  that ignores display scaling, so those fonts keep their original sizes.
-- Scales file-font sizes by --scale (default 4/3). exe_patch.py makes GDI+ create fonts in pixels
-  instead of DPI-dependent points; at the 96 DPI the game was made for, points = pixels * 4/3,
-  so this keeps the original text size on any Windows display scaling.
+  game's own A&A.TTF (proper tails); without it, the system font Tahoma.
+- Scales the sizes of fonts that were file fonts originally (A&A.TTF) by --scale (default 4/3).
+  exe_patch.py makes GDI+ create fonts in pixels instead of DPI-dependent points; at the 96 DPI
+  the game was made for, points = pixels * 4/3, so this keeps the original text size on any
+  Windows display scaling. Former Arial fonts were drawn at their plain size and keep it.
 
 usage: fonts.py <game dir> [--liberation <dir with LiberationSans-Bold.ttf>] [--scale 1.3333] [--out dir]
 """
@@ -51,21 +51,23 @@ def main():
     for f in FILES:
         text = data.read(f"Fonts/{f}").decode("latin-1")
         text, n_hangul = HANGUL.subn("", text)
-        text, n_arial = ARIAL.subn(lambda m: f"{m.group(1)}{replacement}{m.group(2)}", text)
         sizes = []
 
-        def scale_block(block):
-            base = re.search(r"ids\s*=\s*base.*?\n\s*font\s*=\s*(\S+)", block.group(0), re.S)
-            if base and not base.group(1).startswith("/"):
-                return block.group(0)  # system font (Tahoma): drawn without DPI scaling, keep size
+        def fix_block(block):
+            b = block.group(0)
+            base = re.search(r"ids\s*=\s*base.*?\n\s*font\s*=\s*(\S+)", b, re.S)
+            # Only fonts that were file fonts originally (A&A.TTF) went through GDI+ in points;
+            # the former system fonts (Arial) were drawn at their plain size, so keep theirs.
+            if not base or base.group(1).startswith("/"):
+                def scale(m):
+                    new = max(1, round(int(m.group(2)) * a.scale))
+                    sizes.append(f"{m.group(2)}->{new}")
+                    return f"{m.group(1)}{new}"
+                b = SIZES.sub(scale, b)
+            return ARIAL.sub(lambda m: f"{m.group(1)}{replacement}{m.group(2)}", b)
 
-            def scale(m):
-                new = max(1, round(int(m.group(2)) * a.scale))
-                sizes.append(f"{m.group(2)}->{new}")
-                return f"{m.group(1)}{new}"
-            return SIZES.sub(scale, block.group(0))
-
-        text = FONT_BLOCK.sub(scale_block, text)
+        n_arial = len(ARIAL.findall(text))
+        text = FONT_BLOCK.sub(fix_block, text)
         (out / f).write_bytes(text.encode("latin-1"))
         print(f"{f}: -{n_hangul} GulimChe sets, {n_arial} Arial->{replacement}, sizes {' '.join(sizes) or 'unchanged'}")
 
