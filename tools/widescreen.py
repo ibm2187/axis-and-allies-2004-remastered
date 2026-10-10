@@ -6,6 +6,8 @@ the virtual space to 768 * aspect (E extra units) and repositions layouts so not
 
   right   shift by E (things that belong at the right edge)
   center  shift by E/2 (dialogs and centered panels)
+  stretch widen by E, keeping the left edge
+  (scale, W) scale a child's position and width with a parent W units wide that was stretched
   box     turn a full-screen root into a centered 1024-wide box (whole menu screens)
   The in-game control panel art is cut into five slices (left, stretchable middles, emblem,
   right) for the default UI and every nation skin.
@@ -48,9 +50,17 @@ RULES = [
     ("UI/Game/time_message.tgi", 3, "right"),
     ("UI/Game/time_message.tgi", 18, "right"),
     ("UI/Game/politics_display.tgi", 20, "right"),
-    ("UI/Game/object_display.tgi", 2, "center"),
-    ("UI/Game/economy_bar.tgi", 1, "center"),
-    ("UI/Game/economy_bar.tgi", 15, "center"),
+    ("UI/Game/object_display.tgi", 2, "stretch"),  # keep left-aligned in the panel, widen
+    # economy bars sit over the info display: widen them the same way, and scale their fields
+    # with the stretched bar art so values stay between the painted separators
+    ("UI/Game/economy_bar.tgi", 1, "stretch"),
+    ("UI/Game/economy_bar.tgi", 15, "stretch"),
+    ("UI/Game/template_game.tgi", 430, ("scale", 459)),  # money
+    ("UI/Game/template_game.tgi", 440, ("scale", 459)),  # ammo
+    ("UI/Game/template_game.tgi", 450, ("scale", 459)),  # oil
+    ("UI/Game/template_game.tgi", 461, ("scale", 459)),  # building limit
+    ("UI/Game/template_game.tgi", 484, ("scale", 459)),  # unit limit
+    ("UI/Game/template_game.tgi", 507, ("scale", 459)),  # faction experience
     ("UI/Game/favorites_display.tgi", 2, "center"),
     ("UI/Game/objectives_display.tgi", 1, "center"),
     ("UI/Game/technology_display.tgi", 1, "center"),
@@ -64,6 +74,19 @@ RULES = [
     ("UI/Game/file_dialog.tgi", 1, "center"),
     ("UI/Game/game_menu.tgi", 4, "center"),
     ("UI/Game/game_menu.tgi", 175, "center"),
+    # long labels ("Quit Axis & Allies", "Connection Status") overflow the 182-unit menu button
+    # without the old horizontal stretch: widen to 220, centered in the dialog
+    ("UI/Game/game_menu.tgi", 20, ("width", 82, 220)),    # separator
+    ("UI/Game/game_menu.tgi", 60, ("width", 82, 220)),    # options
+    ("UI/Game/game_menu.tgi", 75, ("width", 82, 220)),    # load
+    ("UI/Game/game_menu.tgi", 90, ("width", 82, 220)),    # save
+    ("UI/Game/game_menu.tgi", 105, ("width", 82, 220)),   # connection status
+    ("UI/Game/game_menu.tgi", 120, ("width", 82, 220)),   # abort mission
+    ("UI/Game/game_menu.tgi", 152, ("width", 82, 220)),   # quit
+    ("UI/Game/game_menu.tgi", 167, ("width", 82, 220)),   # return to game
+    ("UI/Game/game_menu.tgi", 199, ("width", 73, 220)),   # resign dialog: resign
+    ("UI/Game/game_menu.tgi", 214, ("width", 73, 220)),   # leave game
+    ("UI/Game/game_menu.tgi", 229, ("width", 73, 220)),   # cancel
     ("UI/Lobby/player_profile_dialog.tgi", 638, "center"),
     ("UI/Menus/create_game_dialog.tgi", 2, "center"),
     ("UI/Menus/join_direct_dialog.tgi", 2, "center"),
@@ -102,12 +125,34 @@ def num(v):
     return f"{v:.4f}".rstrip("0").rstrip(".")
 
 
+def set_width(lines, i, left, width, verbose):
+    """Set L and the width (R = +width) of the coordinate run starting at lines[i]."""
+    m = COORD.match(lines[i])
+    pre, eq, post = m.group(1), m.group(3), m.group(7)
+    before = lines[i]
+    lines[i] = f"{pre}L{eq}{num(left)}{post}"
+    j, last = i + 1, i
+    while j < len(lines) and j - i < 6 and COORD.match(lines[j]):
+        if COORD.match(lines[j]).group(2) == "R":
+            lines[j] = f"{pre}R{eq}+{num(width)}"
+            break
+        last = j
+        j += 1
+    else:
+        lines.insert(last + 1, f"{pre}R{eq}+{num(width)}")
+    if verbose:
+        print(f"    {i + 1}: {before.strip()} -> L {num(left)}, width {num(width)}")
+
+
 def apply_rule(lines, line_no, kind, e, verbose=False):
     i = line_no - 1
     while i < len(lines) and not re.match(r"^\s*L\s*=", lines[i]):
         i += 1
         if i - (line_no - 1) > 40:
             raise ValueError(f"no L assignment near line {line_no}")
+    if isinstance(kind, tuple) and kind[0] == "width":
+        set_width(lines, i, kind[1], kind[2], verbose)
+        return
     j = i
     while j < len(lines) and j - i < 10 and not re.match(r"^\s*[\[}]", lines[j]):
         m = COORD.match(lines[j])
@@ -122,6 +167,11 @@ def apply_rule(lines, line_no, kind, e, verbose=False):
                     lines[j] = f"{pre}R{eq}+1024{post}"
             elif kind in ("right", "center") and key in ("L", "R") and not sign and not suf:
                 lines[j] = f"{pre}{key}{eq}{num(v + (e if kind == 'right' else e / 2))}{post}"
+            elif kind == "stretch" and key == "R" and not suf:
+                lines[j] = f"{pre}R{eq}{sign}{num(v + e)}{post}"
+            elif isinstance(kind, tuple) and kind[0] == "scale" and key in ("L", "R") and not suf:
+                k = (kind[1] + e) / kind[1]  # child of a parent kind[1] units wide that was stretched by e
+                lines[j] = f"{pre}{key}{eq}{sign}{num(v * k)}{post}"
             if verbose and lines[j] != before:
                 print(f"    {j + 1}: {before.strip()} -> {lines[j].strip()}")
         j += 1
@@ -141,7 +191,8 @@ def control_panel_art(text, e):
             "\t\t\tclient_L = 0%", "\t\t\tclient_T = 170b", "\t\t\tclient_R = 100%", "\t\t\tclient_B = 100%",
             "\t\t}"]))
     pat = re.compile(r"\t\t\[Child Template=DecalVE\]\r?\n\t\t\{\r?\n\t\t\ttexture = /UI/%s/Game/ControlPanel/Background\.tga.*?\r?\n\t\t\}", re.S)
-    new, n = pat.subn(lambda _: nl.join(blocks), text, count=1)
+    # several decals with the same 'when' state need validation off (as staging.tgi does)
+    new, n = pat.subn(lambda _: "\t\tvalidate_decal_children = false" + nl + nl.join(blocks), text, count=1)
     if n != 1:
         raise ValueError("control panel background decal not found")
     return new
@@ -215,7 +266,7 @@ def main():
         raw = data.read(f).decode("latin-1").splitlines(keepends=True)
         ends = [l[len(l.rstrip("\r\n\x0b\x0c\x1c\x1d\x1e\x85")):] for l in raw]
         lines = [l[:len(l) - len(end)] for l, end in zip(raw, ends)]
-        for line, kind in rules:
+        for line, kind in sorted(rules, key=lambda r: -r[0]):  # bottom-up: width rules may insert lines
             if a.verbose:
                 print(f"  {f}:{line} {kind}")
             try:
