@@ -29,9 +29,22 @@ Get-ChildItem $mod -Recurse -File | ForEach-Object {
   Write-Host "   $($_.FullName.Substring($mod.Length + 1))"
 }
 
-Write-Host '== Fonts (crash fix, DPI-independent sizes)'
-python -I (Join-Path $repo 'tools\fonts.py') $GameDir
-if ($LASTEXITCODE) { throw 'fonts.py failed' }
+Write-Host '== Fonts (crash fix, DPI-independent sizes, Liberation Sans for Arial)'
+$fontTmp = Join-Path ([IO.Path]::GetTempPath()) ("aa2004-fonts-" + [guid]::NewGuid())
+New-Item -ItemType Directory $fontTmp | Out-Null
+try {
+  $libArgs = @()
+  try {
+    $tgz = Join-Path $fontTmp 'liberation.tar.gz'
+    Invoke-WebRequest 'https://github.com/liberationfonts/liberation-fonts/files/7261482/liberation-fonts-ttf-2.1.5.tar.gz' -OutFile $tgz
+    tar -xzf $tgz -C $fontTmp
+    if ($LASTEXITCODE) { throw 'tar failed' }
+    $libArgs = @('--liberation', (Join-Path $fontTmp 'liberation-fonts-ttf-2.1.5'))
+  } catch { Write-Warning "Liberation Sans download failed ($_); using Tahoma" }
+  python -I (Join-Path $repo 'tools\fonts.py') $GameDir @libArgs
+  if ($LASTEXITCODE) { throw 'fonts.py failed' }
+}
+finally { Remove-Item -Recurse -Force $fontTmp -ErrorAction SilentlyContinue }
 
 Write-Host "== Widescreen UI ($Aspect)"
 python -I (Join-Path $repo 'tools\widescreen.py') $GameDir --aspect $Aspect
