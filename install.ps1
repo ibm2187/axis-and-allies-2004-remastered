@@ -2,9 +2,10 @@
 #
 #   pwsh -ExecutionPolicy Bypass -File install.ps1 -GameDir "C:\path\to\Game Files"
 #
-# Steps: copy mod/ files, generate widescreen UI overrides for -Aspect (default 16:9; use 4:3
-# to restore the original layout space), set the 4 GB large-address-aware flag on AA.exe, mark
-# AA.exe DPI-aware for the current user, install dgVoodoo2 (D3D9 -> D3D11) and stage DXVK.
+# Steps: copy mod/ files, generate font overrides, generate widescreen UI overrides for -Aspect
+# (default 16:9; use 4:3 to restore the original layout space), set the 4 GB large-address-aware
+# flag and byte patches on AA.exe, mark AA.exe DPI-aware for the current user, install dgVoodoo2
+# (D3D9 -> D3D11) and stage DXVK.
 param(
   [Parameter(Mandatory)][string]$GameDir,
   [string]$DgVoodooVersion = '2.87.5',
@@ -28,6 +29,10 @@ Get-ChildItem $mod -Recurse -File | ForEach-Object {
   Write-Host "   $($_.FullName.Substring($mod.Length + 1))"
 }
 
+Write-Host '== Fonts (crash fix, DPI-independent sizes)'
+python -I (Join-Path $repo 'tools\fonts.py') $GameDir
+if ($LASTEXITCODE) { throw 'fonts.py failed' }
+
 Write-Host "== Widescreen UI ($Aspect)"
 python -I (Join-Path $repo 'tools\widescreen.py') $GameDir --aspect $Aspect
 if ($LASTEXITCODE) { throw 'widescreen.py failed' }
@@ -35,6 +40,10 @@ if ($LASTEXITCODE) { throw 'widescreen.py failed' }
 Write-Host '== Large-address-aware flag'
 python -I (Join-Path $repo 'tools\laa.py') $exe --set
 if ($LASTEXITCODE) { throw 'laa.py failed' }
+
+Write-Host '== AA.exe byte patches'
+python -I (Join-Path $repo 'tools\exe_patch.py') $exe --apply
+if ($LASTEXITCODE) { throw 'exe_patch.py failed' }
 
 Write-Host '== DPI-aware compatibility flag (HKCU)'
 $layers = 'HKCU:\Software\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Layers'
