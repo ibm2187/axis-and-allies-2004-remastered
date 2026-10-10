@@ -1,0 +1,8 @@
+# Never commit copyrighted game files or third-party binaries
+*.exe
+*.dll
+*.rwd
+*.dmp
+*.log
+__pycache__/
+extract/

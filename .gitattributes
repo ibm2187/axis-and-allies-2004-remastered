@@ -1,0 +1,2 @@
+# Game data files are consumed byte-for-byte by the engine; never convert line endings.
+mod/** -text
