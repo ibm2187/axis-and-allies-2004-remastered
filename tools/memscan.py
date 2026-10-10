@@ -5,6 +5,7 @@ usage:
   memscan.py floats <v> [...]              find float32 values
   memscan.py ints <v> [...]                find int32 values in the EXE's own .data/.bss image region
   memscan.py dump <hexaddr> [n]            dump n dwords as int/float
+  memscan.py ves <screenW> <screenH>       list UI view elements whose parent covers the whole screen
 """
 import ctypes
 import ctypes.wintypes as wt
@@ -48,6 +49,44 @@ def main():
     h = k32.OpenProcess(PROCESS_VM_READ | PROCESS_QUERY_INFORMATION, False, pid_of())
     if not h:
         raise OSError(ctypes.get_last_error())
+    if cmd == "ves":
+        # UI view elements whose parent covers the whole screen. Layout of a view element:
+        # +0 vtable, +8 parent VE, +0x10 raw L,T,R,B (layout units), +0x20 screen rect, +0x88 flags.
+        import numpy as np
+        sw, sh = float(args[0]), float(args[1])
+        regs = [(b, read(h, b, s)) for b, s, t in regions(h) if t == 0x20000]
+        full = struct.pack("<ffff", 0.0, 0.0, sw, sh)
+        roots = set()
+        for base, data in regs:
+            i = data.find(full)
+            while i != -1:
+                for off in (0x20, 0x54):
+                    o = i - off
+                    if o >= 0 and o % 4 == 0 and 0x9F0000 <= struct.unpack_from("<I", data, o)[0] < 0xAE0000:
+                        roots.add(base + o)
+                i = data.find(full, i + 1)
+        print(f"; {len(roots)} full-screen parent candidates")
+        rootarr = np.array(sorted(roots), dtype=np.uint32)
+        seen = set()
+        for base, data in regs:
+            n = len(data) // 4
+            arr = np.frombuffer(data[:n * 4], dtype=np.uint32)
+            for idx in np.nonzero(np.isin(arr, rootarr))[0]:
+                o = int(idx) * 4 - 8
+                if o < 0 or o + 0x8C > len(data):
+                    continue
+                vt = struct.unpack_from("<I", data, o)[0]
+                if not (0x9F0000 <= vt < 0xAE0000) or base + o in seen:
+                    continue
+                raw = struct.unpack_from("<4f", data, o + 0x10)
+                scr = struct.unpack_from("<4f", data, o + 0x20)
+                flags = struct.unpack_from("<I", data, o + 0x88)[0]
+                if not all(-10000 < v < 10000 for v in raw + scr):
+                    continue
+                seen.add(base + o)
+                print(f"{base + o:08X} vt={vt:06X} raw=({raw[0]:g},{raw[1]:g},{raw[2]:g},{raw[3]:g}) "
+                      f"scr=({scr[0]:g},{scr[1]:g},{scr[2]:g},{scr[3]:g}) flags={flags:08X}")
+        return
     if cmd == "dump":
         a, n = int(args[0], 16), int(args[1]) if len(args) > 1 else 16
         data = read(h, a, n * 4)

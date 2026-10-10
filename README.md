@@ -22,14 +22,22 @@ Requires Python 3 on `PATH` (for the `AA.exe` header patch) and internet access 
 | 4 GB large-address-aware flag | `AA.exe` byte 0x946: 0x0E to 0x2E | `python tools/laa.py AA.exe --clear` |
 | DPI-aware flag | `HKCU\...\AppCompatFlags\Layers`, value = path of `AA.exe` | Delete that value |
 
-## Recommended resolution
+## Widescreen UI
 
-The UI is laid out in a fixed 1024x768 space and stretched to the screen, so 16:9 modes look wide. Until the widescreen patch lands, pick the largest 4:3 mode in Options (2880x2160 on a 4K display); dgVoodoo pillarboxes it with correct proportions.
+The engine lays the UI out in a virtual `InterfacePositioningWidth` x `InterfacePositioningHeight` space (1024 x 768, in `AVars.tgi`) and scales each axis to the screen, so 16:9 stretched it. `tools/widescreen.py` (run by `install.ps1 -Aspect 16:9`) generates loose overrides from the installed game's data:
+
+- `AVars.tgi`: `InterfacePositioningWidth = 768 * aspect` (1365.33 for 16:9), so the UI keeps its proportions.
+- Main/Single Player/Multiplayer menu column moved to the right edge; 3D menu background stays full width.
+- In-game HUD: control panel art cut into five slices per skin (default + 5 nations, 3 resolution variants), minimap left, command panel right edge, info panel centered with the nation emblem intact.
+- Dialogs and in-game popups centered.
+- Full-screen menu screens (options, staging, campaign, debriefing, scoring, credits, lobby, loading) shown as a centered 4:3 box.
+
+Generated files are listed in `data/widescreen-generated.txt` and removed on the next run; `install.ps1 -Aspect 4:3` restores the original layout. Pick 3840x2160 (or any 16:9 mode) in Options. dgVoodoo also adds the largest 4:3 mode (2880x2160 on 4K) if you prefer the original layout pillarboxed.
 
 ## Layout
 
 - `mod/` — files copied into the game folder as-is. Loose files under `data/` override the same paths inside `Data.rwd`.
-- `tools/` — `rwd.ps1` (list/extract `.rwd` archives), `laa.py`, `strip_hangul.py`, `ttfinfo.py`, `tga2png.py`, `capture_menu.ps1` (launch + screenshot main menu), `peinfo.ps1`, `aa_re.py` (strings/constants/xrefs/disassembly, needs capstone), `memscan.py` (read-only memory scan of a running AA.exe).
+- `tools/` — `rwd.ps1` (list/extract `.rwd` archives), `laa.py`, `strip_hangul.py`, `ttfinfo.py`, `tga2png.py`, `capture_menu.ps1` (launch + screenshot main menu), `peinfo.ps1`, `aa_re.py` (strings/constants/xrefs/disassembly, needs capstone), `memscan.py` (read-only memory scan of a running AA.exe, incl. `ves` to list top-level UI elements), `rwd.py` (Python archive reader), `widescreen.py` (widescreen UI generator), `ui_layout.py` (index UI layout entries / match them to runtime elements).
 
 ## Engine notes
 
