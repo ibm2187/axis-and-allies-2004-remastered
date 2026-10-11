@@ -9,9 +9,11 @@ $script:CameraAppVars = [ordered]@{
 }
 
 $script:CameraUserVars = [ordered]@{
-  # "approximately 20% more than on-screen for max zoom": 120 for the stock limit of 1.4,
-  # (1.8 / 1.4)^2 = 1.65x the ground on screen
-  TerrainTexturePoolDesiredNumEntries = '200'
+  # "approximately 20% more than on-screen for max zoom": 120 for a 4:3 screen and the stock limit
+  # of 1.4. A 16:9 view at 1.8 shows about 2.2x that ground; when the pool runs out, patches fall
+  # back to the 128 px minimum and the HD ground turns blocky (200 was not enough). 400 x 1024 px
+  # is 1.68 GB of the 2 GB the engine sees, leaving ~420 MB (its low-memory cutoff is 33 MB).
+  TerrainTexturePoolDesiredNumEntries = '400'
 }
 
 function Get-CameraPatches {
