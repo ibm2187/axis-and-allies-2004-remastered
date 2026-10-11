@@ -126,6 +126,15 @@ def write_png(im, path):
                      + chunk(b"IDAT", zlib.compress(raw, 9)) + chunk(b"IEND", b""))
 
 
+def keep_binary_alpha(im, src):
+    """Alpha back to 0/255 when the source art's alpha is only 0/255. The game draws any alpha
+    above 0 fully opaque, so the soft edge the upscale and resize give such art showed the colour
+    padding of transparent pixels as solid noise (along the top of the HUD panels)."""
+    if np.isin(np.asarray(src.getchannel("A")), (0, 255)).all():
+        im.putalpha(im.getchannel("A").point(lambda v: 255 if v >= 128 else 0))
+    return im
+
+
 def save(im, path):
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.suffix.lower() == ".tga":
@@ -259,7 +268,7 @@ def main():
     for out, src, size in plan:
         s = hashlib.sha1(src.tobytes() + str(src.size).encode()).hexdigest()
         im = big[s].resize(size, Image.LANCZOS) if s in big else src.resize(size, Image.LANCZOS)
-        save(im, out)
+        save(keep_binary_alpha(im, src), out)
         written.append(out)
     if cursor_scale > 1:
         for n in ("Cursors/cursors_aa.tgi",):  # cursors.tgi is the engine's commented-out list

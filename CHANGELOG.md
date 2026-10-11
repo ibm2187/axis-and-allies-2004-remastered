@@ -3,6 +3,14 @@
 All notable changes to Axis & Allies (2004) Remastered. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.0.1] - 2026-10-11
+
+### Fixed
+- Coloured noise along the top edge of the HUD panels with the HD art. The game's UI art uses
+  on/off transparency and draws any non-zero alpha as opaque; the upscaled art had soft edges
+  that showed the padding colours of transparent pixels. UI art with on/off transparency keeps it
+  (HD pack 1.1, release `hd-1.1`).
+
 ## [1.0.0] - 2026-10-11
 
 The first release meant for other players: one double-click to install, nothing else to set up.
@@ -80,6 +88,7 @@ The first release meant for other players: one double-click to install, nothing 
   with 16x anisotropic filtering and the largest 4:3 mode in the resolution list.
 - Reverse-engineering tools for the TGCK archives and `AA.exe`.
 
+[1.0.1]: https://github.com/ibm2187/axis-and-allies-2004-remastered/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/ibm2187/axis-and-allies-2004-remastered/compare/48a4bf1...v1.0.0
 [0.4.0]: https://github.com/ibm2187/axis-and-allies-2004-remastered/compare/03f919c...48a4bf1
 [0.3.0]: https://github.com/ibm2187/axis-and-allies-2004-remastered/compare/85b34cb...03f919c
