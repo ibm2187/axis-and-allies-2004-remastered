@@ -64,11 +64,12 @@ The mouse cursor frames (32x32) are upscaled by screen height / 1080 (2x at 2160
 
 ## ReShade (optional, installed separately)
 
-ReShade 6.8 (32-bit) works on top of dgVoodoo: in its installer pick **Direct3D 10/11/12** (it becomes `dxgi.dll`; choosing Direct3D 9 would overwrite dgVoodoo's `D3D9.dll`). Packages: Standard effects, SweetFX, qUINT. Working settings are kept in `reshade/` (copy both files next to `AA.exe` while the game is closed; ReShade saves over them on exit):
+ReShade 6.8 (32-bit) works on top of dgVoodoo: in its installer pick **Direct3D 10/11/12** (it becomes `dxgi.dll`; choosing Direct3D 9 would overwrite dgVoodoo's `D3D9.dll`). Working settings are kept in `reshade/` (copy both files next to `AA.exe` while the game is closed; ReShade saves over them on exit):
 
 - Depth (Add-ons > Generic Depth): the 3840x2160 D24S8 buffer with "Copy depth buffer before clear operations" on (`[DEPTH] DepthCopyBeforeClears=1`); without it ReShade only sees the HUD's depth.
 - `RESHADE_DEPTH_LINEARIZATION_FAR_PLANE=50` (default 1000 renders the whole RTS scene as near-black depth).
-- Effects: MXAO (qUINT) quality High, radius 1.5, amount 1.5, fade 0.90-1.00 (the default fade end 0.4 hides it entirely at RTS camera height), and SMAA for edges (forced MSAA in dgVoodoo draws seams on the terrain).
+- Packages: Standard effects, SweetFX, qUINT, iMMERSE. Effect order: UIMask_Top, iMMERSE MXAO (High, radius 2.0, amount 0.9, fade 1.0; the default fade 0.25 hides it at RTS camera height), Lightroom (contrast +0.12, vibrance +0.20, saturation +0.05), iMMERSE Sharpen 0.5, iMMERSE SMAA (forced MSAA in dgVoodoo draws seams on the terrain), UIMask_Bottom.
+- HUD mask: `tools/reshade_uimask.py <game dir> "<game dir>/reshade-shaders/Textures/UIMask.png"` builds it from the real control-panel art of all nation skins placed by the widescreen layout, plus the top-left bars; white = HUD, which UIMask restores so grading and sharpening only touch the 3D scene. Popup dialogs are not masked.
 
 ## Layout
 
