@@ -8,7 +8,9 @@ the virtual space to 768 * aspect (E extra units) and repositions layouts so not
   center  shift by E/2 (dialogs and centered panels)
   stretch widen by E, keeping the left edge
   (scale, W) scale a child's position and width with a parent W units wide that was stretched
-  box     turn a full-screen root into a centered 1024-wide box (whole menu screens)
+  box     turn a full-screen root into a centered 1024-wide box (whole menu screens, and the
+          campaign map control panel)
+  (tooltip, right|center) shift an anchored_tooltip_x by E or E/2
   The in-game control panel art is cut into five slices (left, stretchable middles, emblem,
   right) for the default UI and every nation skin.
 
@@ -110,6 +112,25 @@ RULES = [
     ("UI/Editor/new_map_dialog.tgi", 4, "center"),
     ("UI/Editor/objectives_dialog.tgi", 4, "center"),
     ("UI/Editor/properties_dialog.tgi", 7, "center"),
+    # anchored tooltips: x is the tooltip's right edge (left edge when it expands downward), in
+    # screen units, so it follows the panel it sits over
+    ("UI/Game/game_interface.tgi", 180, ("tooltip", "right")),  # over the command panel
+    # campaign world map. The control panel art is three buildings with widgets over all of
+    # them and nothing that stretches cleanly, so the panel is boxed and the map shows at the
+    # sides. Object display and command buttons are its children and move with it; the minimap
+    # is a sibling (AA.exe 0x935446 adds it to the interface) and is shifted to match.
+    ("MetaGame/UI/metagame_cp.tgi", 7, "box"),
+    ("MetaGame/UI/metagame_minimap.tgi", 11, "center"),
+    ("MetaGame/UI/metagame_interface.tgi", 8, ("tooltip", "center")),  # right edge of the panel
+    ("MetaGame/UI/metagame_politics_display.tgi", 21, "right"),
+    ("MetaGame/UI/metagame_menu.tgi", 8, "center"),
+    ("MetaGame/UI/metagame_history.tgi", 8, "center"),
+    ("MetaGame/UI/metagame_help_popup.tgi", 8, "center"),
+    ("MetaGame/UI/metagame_start_battle.tgi", 8, "center"),
+    ("MetaGame/UI/metagame_purchasing.tgi", 8, ("tooltip", "center")),
+    ("MetaGame/UI/metagame_purchasing.tgi", 14, "center"),
+    ("MetaGame/UI/choose_dynamic_campaign.tgi", 69, ("tooltip", "center")),
+    ("MetaGame/UI/choose_dynamic_campaign.tgi", 76, "box"),
 ]
 
 # Control panel art cuts, as positions in the 1024-unit layout (= fraction of texture width).
@@ -146,6 +167,15 @@ def set_width(lines, i, left, width, verbose):
 
 def apply_rule(lines, line_no, kind, e, verbose=False):
     i = line_no - 1
+    if isinstance(kind, tuple) and kind[0] == "tooltip":
+        m = re.match(r"^(\s*float\s+anchored_tooltip_x\s*=\s*)([0-9.]+)(.*)$", lines[i])
+        if not m:
+            raise ValueError(f"no anchored_tooltip_x on line {line_no}")
+        before = lines[i]
+        lines[i] = f"{m.group(1)}{num(float(m.group(2)) + (e if kind[1] == 'right' else e / 2))}{m.group(3)}"
+        if verbose:
+            print(f"    {line_no}: {before.strip()} -> {lines[i].strip()}")
+        return
     while i < len(lines) and not re.match(r"^\s*L\s*=", lines[i]):
         i += 1
         if i - (line_no - 1) > 40:
