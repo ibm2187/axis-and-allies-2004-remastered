@@ -46,12 +46,12 @@ INPLACE = ("properties/techicons/", "properties/propertyicons/", "properties/abi
            "campaign/", "generals/", "metagame/divisions/", "metagame/ui/", "minimap/icons/",
            "nations/", "organizations/", "ui/default/", "ui/game/")
 INPLACE_SKIP = re.compile(r"/(800|1024|1280)/|^ui/test/", re.I)
-# Textures the game composites in software at their original size. With larger versions the
-# command grid showed sheared white garbage over every button (a pixel copy using the old row
-# width). Unit banners combine an icon and a nation badge the same way. These keep the shipped art.
-FIXED_SIZE = re.compile(r"^(ui/game/(actionbuttons|regimentbuttons|buildingbuttons)/"
-                        r"|ui/game/sharedtextures/(button(un)?focused|buttonpressed|actionbuttonbordertargeted)\."
-                        r"|properties/techicons/|organizations/|nations/[^/]+/[^/]*badge)", re.I)
+# Textures the game uses at their exact pixel size. Larger command-grid frames gave sheared white
+# garbage over every button (seen with the original icons inside, so the frames alone do it);
+# larger minimap icons were drawn into the minimap pixel for pixel, big and white. Unit banners
+# combine an icon and a nation badge into one image, likely the same way. These keep the shipped art.
+FIXED_SIZE = re.compile(r"^(ui/game/sharedtextures/(button(un)?focused|buttonpressed|actionbuttonbordertargeted)\."
+                        r"|minimap/|organizations/|nations/[^/]+/[^/]*badge)", re.I)
 
 
 def set_paths(data):

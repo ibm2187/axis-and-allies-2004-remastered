@@ -43,9 +43,9 @@ UI textures are referenced as `/UI/%s/...`; `AA.exe` fills `%s` with the screen 
 
 - Real-ESRGAN ncnn-vulkan (BSD-3) is downloaded once into `.cache/esrgan`; a venv with Pillow and numpy into `.cache/venv`; 4x results are cached in `.cache/upscale` by source hash, so re-runs take seconds. First run ~2.5 minutes on an RX 9070 XT.
 - Loose files under `data/**/3840/` and `skins/<nation>/**/3840/`, listed in `data/upscale-generated.txt`; `install.ps1 -UiArt off` removes them.
-- Icons and pictures the game loads by a fixed path are replaced in place at the same size factor (`--no-inplace` skips them): property, ability and message-log icons, minimap icons, campaign briefing pictures, general portraits, nation emblems, campaign-map division icons and remaining UI pieces (~480 files).
+- Icons and pictures the game loads by a fixed path are replaced in place at the same size factor (`--no-inplace` skips them): recruit, building, tech, property, ability and message-log icons, campaign briefing pictures, general portraits, nation emblems, campaign-map division icons and remaining UI pieces.
 - PNGs are written with a single `IDAT` chunk: the game's loader reads only the first one (every shipped PNG has one), and multi-chunk files rendered as garbage.
-- Kept at the shipped size: everything the game composites in software at a fixed size — the command grid (button frames, action, recruit, building and tech icons) and unit banners with nation badges. With larger versions the grid showed sheared white garbage (a pixel copy using the old row width).
+- Kept at the shipped size (`FIXED_SIZE`): textures the game uses at their exact pixel size. Larger command-grid frames gave sheared white garbage over every button; larger minimap icons were drawn into the minimap pixel for pixel, big and white; unit banners and nation badges are combined into one image, likely the same way.
 
 ## Layout
 
