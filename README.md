@@ -31,7 +31,9 @@ The engine lays the UI out in a virtual `InterfacePositioningWidth` x `Interface
 - Main/Single Player/Multiplayer menu column moved to the right edge; 3D menu background stays full width.
 - In-game HUD: control panel art cut into five slices per skin (default + 5 nations, 3 resolution variants), minimap left, command panel right edge, info panel centered with the nation emblem intact.
 - Dialogs and in-game popups centered.
-- Full-screen menu screens (options, staging, campaign, debriefing, scoring, credits, lobby, loading) shown as a centered 4:3 box.
+- Full-screen menu screens (options, staging, campaign, dynamic campaign chooser, debriefing, scoring, credits, lobby, loading) shown as a centered 4:3 box.
+- Campaign world map: the bottom control panel is a centered 4:3 box (its art has no part that stretches cleanly), with the minimap, tooltips and dialogs following it; the politics list stays at the right edge.
+- Anchored tooltips (`anchored_tooltip_x` is the tooltip's right edge in screen units) move with the panel they belong to, in-game and on the campaign map.
 
 Generated files are listed in `data/widescreen-generated.txt` and removed on the next run; `install.ps1 -Aspect 4:3` restores the original layout. Pick 3840x2160 (or any 16:9 mode) in Options. dgVoodoo also adds the largest 4:3 mode (2880x2160 on 4K) if you prefer the original layout pillarboxed.
 
