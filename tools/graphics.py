@@ -17,8 +17,9 @@ from rwd import Rwd  # noqa: E402
 SETTINGS = {
     # upgrades TEXTURE shadows to PROJECTED and grows the shadow pool (UVars comment)
     "ViewQualityExtreme": "true",
-    # terrain patches are pre-rendered into this pool; 128 px blurs the ground at 4K
-    "TerrainTexturePoolDesiredTextureResolution": "512",
+    # terrain patches are pre-rendered into this pool; a patch covers ~640 screen px at 4K and
+    # default zoom, so 128 px (and still 512) blurs the ground
+    "TerrainTexturePoolDesiredTextureResolution": "1024",
     "TerrainTexturePoolMinTextureResolution": "128",
     # projected shadows
     "ShadowTexturePoolDesiredTextureResolution": "256",
