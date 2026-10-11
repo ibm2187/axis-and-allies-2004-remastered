@@ -3,8 +3,10 @@
 # (Documents/A&A/data/User/UVars.tgi) and still applies on top.
 
 $script:GraphicsUserVars = [ordered]@{
-  # upgrades TEXTURE shadows to PROJECTED and grows the shadow pool (UVars comment)
-  ViewQualityExtreme                         = 'true'
+  # off (the game's default): it upgrades TEXTURE shadows to PROJECTED, and infantry then cast
+  # solid black boxes instead of their soft blob shadow. Set explicitly so installs that had it on
+  # are switched back.
+  ViewQualityExtreme                         = 'false'
   # terrain patches are pre-rendered into this pool; a patch covers ~640 screen px at 4K and
   # default zoom, so 128 px (and still 512) blurs the ground, and the HD ground only shows at 1024
   TerrainTexturePoolDesiredTextureResolution = '1024'

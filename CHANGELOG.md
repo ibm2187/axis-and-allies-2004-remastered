@@ -3,6 +3,20 @@
 All notable changes to Axis & Allies (2004) Remastered. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.0.2] - 2026-10-11
+
+### Fixed
+- Infantry cast solid black boxes instead of shadows: `ViewQualityExtreme` is off again (it turns
+  their soft texture shadows into projected ones, which rendered as boxes).
+- 25 icons stayed low resolution, among them the terrain icons (sand, snow, city, jungle) and
+  property icons in the unit info panel: the game loads them by a fixed path, but because 800/1280
+  versions exist only a copy in the screen-width folder was made. They are now replaced in place.
+- A black notch above the minimap with the British HUD, and dark specks on the edge of a few other
+  HUD buttons (Soviet objectives and politics tabs, German pause button): flaws in the shipped
+  button art, now cleared where the panel itself is transparent.
+
+HD pack 1.2 (release `hd-1.2`).
+
 ## [1.0.1] - 2026-10-11
 
 ### Fixed
@@ -88,6 +102,7 @@ The first release meant for other players: one double-click to install, nothing 
   with 16x anisotropic filtering and the largest 4:3 mode in the resolution list.
 - Reverse-engineering tools for the TGCK archives and `AA.exe`.
 
+[1.0.2]: https://github.com/ibm2187/axis-and-allies-2004-remastered/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/ibm2187/axis-and-allies-2004-remastered/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/ibm2187/axis-and-allies-2004-remastered/compare/48a4bf1...v1.0.0
 [0.4.0]: https://github.com/ibm2187/axis-and-allies-2004-remastered/compare/03f919c...48a4bf1

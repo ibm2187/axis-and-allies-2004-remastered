@@ -62,7 +62,7 @@ removes the compatibility flag and puts your previous game resolution back.
 | Fonts | Crash fix: drops the Korean GulimChe sets, replaces Arial with Liberation Sans Bold. GDI+ fonts in pixels instead of points (text size independent of display scaling; sizes x4/3) | `data/Fonts/`; `AA.exe` bytes 0x3089CF |
 | HD art | Prebuilt AI-upscaled UI art (the set for your screen height), fixed-path icons, 3D and terrain textures, 2x cursor at 2160p | `data/**`, `skins/<nation>/**` |
 | Widescreen | Virtual UI width = 768 x aspect; menus, HUD, dialogs and campaign map moved instead of stretched; control panel art sliced | `data/AVars.tgi`, `data/UI/**`, `data/MetaGame/UI/**`, `skins/<nation>/UI/**` |
-| Graphics | `ViewQualityExtreme`, terrain pool 1024 px, larger shadow and general pools, terrain specular, hit animations, 1.5x particles, deeper shadows | `data/UVars.tgi`, `data/AVars.tgi` |
+| Graphics | Terrain pool 1024 px, larger shadow and general pools, terrain specular, hit animations, 1.5x particles, deeper shadows (`ViewQualityExtreme` stays off: it drew infantry shadows as black boxes) | `data/UVars.tgi`, `data/AVars.tgi` |
 | Lighting | Maps relit: ambient 0.8 -> 0.55 (slightly cool), slightly warm sun | `data/Maps/**/*.RMP` (only the `SUN` entry differs) |
 | Camera | Zoom range 0.7-1.4 -> 0.5-1.8; terrain pool 200 entries to match | `AA.exe` bytes 0x23C5, 0x2447; `data/AVars.tgi`, `data/UVars.tgi` |
 | Display | Game resolution = monitor's native resolution | `Documents\A&A\data\User\UVars.tgi` |
@@ -159,6 +159,7 @@ back in.
   150% Windows scaling glyphs came out 1.5x larger than their cells.
 - Every map embeds its own light (`SUN` entry); the `Sun/*.tgi` presets are not used.
 - The gameplay zoom limits are vars registered with flag 2 (not overridable from `AVars.tgi`).
+- UI art: transparency is on/off (any alpha above 0 draws opaque). `ViewQualityExtreme` switches texture shadows to projected ones, which render as solid black boxes under dgVoodoo.
 - The terrain texture pool must be 1024 px or the HD ground tiles don't show; forced MSAA in
   dgVoodoo draws seams on terrain patches; dgVoodoo VRAM must stay at 2048 MB or the engine
   computes negative free memory.

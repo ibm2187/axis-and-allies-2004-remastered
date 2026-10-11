@@ -75,6 +75,25 @@ def set_paths(data):
     return out
 
 
+FIXED_REF = re.compile(r"([A-Za-z0-9_ ./\\-]+\.(?:tga|png))", re.I)
+
+
+def fixed_paths(data):
+    """Paths (lower case) of textures some .tgi/.lst references directly, without a /%s/ folder."""
+    out = set()
+    for n in data.names():
+        if n.lower().endswith((".tgi", ".lst")):
+            for m in FIXED_REF.finditer(data.read(n).decode("latin-1")):
+                p = m.group(1).strip().replace("\\", "/").lstrip("/").lower()
+                if "%s" not in p:
+                    out.add(p)
+    return out
+
+
+def is_icon(path):
+    return path.startswith("properties/") or path.rsplit("/", 1)[-1].startswith("icon")
+
+
 def pow2(n):
     return 1 << (n - 1).bit_length()
 
@@ -133,6 +152,48 @@ def keep_binary_alpha(im, src):
     if np.isin(np.asarray(src.getchannel("A")), (0, 255)).all():
         im.putalpha(im.getchannel("A").point(lambda v: 255 if v >= 128 else 0))
     return im
+
+
+PANEL_BOX = re.compile(r"\s*([LTRB])\s*=\s*\+?([0-9.]+)\s*$")
+PANEL_TILE = re.compile(r"texture\s*=\s*/UI/%s/Game/ControlPanel/(\w+)\.tga", re.I)
+
+
+def panel_tiles(data):
+    """{tile name: (L, T, W, H)} of the control panel buttons, in panel units (1024 x 256), that sit
+    on its unstretched ends (the widescreen layout keeps them where the shipped art put them)."""
+    tiles, box = {}, {}
+    for line in data.read("UI/Game/control_panel.tgi").decode("latin-1").splitlines():
+        m = PANEL_BOX.match(line)
+        if m:
+            box[m.group(1)] = float(m.group(2))
+        t = PANEL_TILE.search(line)
+        if t and t.group(1) != "Background" and len(box) == 4 and box["R"] >= 4 and box["B"] >= 4:
+            left, right = box["L"], box["L"] + box["R"]
+            if right <= 320 or left >= 792:
+                tiles[t.group(1)] = (box["L"], box["T"], box["R"], box["B"])
+    return tiles
+
+
+def trim_panel_tiles(tiles, folder_dir, background):
+    """Clear dark opaque pixels of button tiles where the panel itself is transparent. Two shipped
+    tiles carry a dark corner past the panel's edge: the British chat button (a black notch above
+    the minimap) and the Soviet objectives tab."""
+    bg = np.asarray(Image.open(background).convert("RGBA"))[..., 3]
+    kx, ky = bg.shape[1] / 1024, bg.shape[0] / 256
+    trimmed = []
+    for name, (left, top, w, h) in tiles.items():
+        path = folder_dir / f"{name}.tga"
+        if not path.exists():
+            continue
+        tile = np.asarray(Image.open(path).convert("RGBA")).copy()
+        under = bg[round(top * ky):round((top + h) * ky), round(left * kx):round((left + w) * kx)]
+        under = np.asarray(Image.fromarray(under).resize((tile.shape[1], tile.shape[0]), Image.NEAREST))
+        stray = (tile[..., 3] > 0) & (under == 0) & (tile[..., :3].max(-1) < 48)
+        if stray.any():
+            tile[stray, 3] = 0
+            write_tga(Image.fromarray(tile), path)
+            trimmed.append(f"{path.parents[4].name}/{name}: {int(stray.sum())} px")
+    return trimmed
 
 
 def save(im, path):
@@ -236,13 +297,17 @@ def main():
     # icons the game loads by a fixed path (no %s): replaced in place, so they are high resolution
     # at every screen size. Only groups drawn into fixed-size UI boxes.
     if not a.no_inplace:
+        fixed = fixed_paths(data)
         for name, arc, out in archives:
             for n in arc.names():
                 low = n.lower()
                 if not (low.startswith(INPLACE) and low.endswith((".png", ".tga"))) or INPLACE_SKIP.search(low):
                     continue
-                if low in paths or FIXED_SIZE.match(low):
-                    continue  # resolution-set art (already in the <width> folder) or composited
+                # resolution-set art is already in the <width> folder, unless some file also loads
+                # it by its fixed path (IconPropertySand.png has 800/1280 versions, but the terrain
+                # properties load /Properties/PropertyIcons/IconPropertySand.png)
+                if (low in paths and not (low in fixed and is_icon(low))) or FIXED_SIZE.match(low):
+                    continue
                 parts = n.split("/")
                 hi = f"{parts[0]}/1280/{'/'.join(parts[1:])}"  # e.g. Properties/1280/TechIcons/x.png
                 src = load(arc.read(hi if arc.has(hi) else n))
@@ -270,6 +335,14 @@ def main():
         im = big[s].resize(size, Image.LANCZOS) if s in big else src.resize(size, Image.LANCZOS)
         save(keep_binary_alpha(im, src), out)
         written.append(out)
+    tiles = panel_tiles(data)
+    default_bg = root / "data" / "UI" / folder / "Game" / "ControlPanel" / "Background.tga"
+    for _, _, out in archives:
+        panel_dir = out / "UI" / folder / "Game" / "ControlPanel"
+        background = panel_dir / "Background.tga" if (panel_dir / "Background.tga").exists() else default_bg
+        if panel_dir.exists() and background.exists():
+            for line in trim_panel_tiles(tiles, panel_dir, background):
+                print(f"  trimmed {line}")
     if cursor_scale > 1:
         for n in ("Cursors/cursors_aa.tgi",):  # cursors.tgi is the engine's commented-out list
             text = data.read(n).decode("latin-1")

@@ -1,54 +1,54 @@
 {
-    "version":  "1.1",
-    "baseUrl":  "https://github.com/ibm2187/axis-and-allies-2004-remastered/releases/download/hd-1.1",
+    "version":  "1.2",
+    "baseUrl":  "https://github.com/ibm2187/axis-and-allies-2004-remastered/releases/download/hd-1.2",
     "parts":  [
                   {
-                      "file":  "AA2004-Remastered-HD-1.1-textures-1.zip",
+                      "file":  "AA2004-Remastered-HD-1.2-textures-1.zip",
                       "kind":  "textures",
                       "files":  1390,
                       "bytes":  811615315,
-                      "sha256":  "1CEBD08D52CD9938587B6D34A8BDD942D7E02B807817F467F9918D609E4F1C61"
+                      "sha256":  "7080D6DBBAEC84E1D1E6552E272F8130F72E8B00B0F5D96D585B3D89883B1062"
                   },
                   {
-                      "file":  "AA2004-Remastered-HD-1.1-textures-2.zip",
+                      "file":  "AA2004-Remastered-HD-1.2-textures-2.zip",
                       "kind":  "textures",
                       "files":  2574,
                       "bytes":  830887324,
-                      "sha256":  "C420D1470CA44D487966E7E6CDCC026A8903A198FB2EC87C61280471A78D4762"
+                      "sha256":  "CD6D036CEC662E156E501F4648C7DFE4C9BBFE1AB478142CB05C78B593B2E021"
                   },
                   {
-                      "file":  "AA2004-Remastered-HD-1.1-ui-1080.zip",
+                      "file":  "AA2004-Remastered-HD-1.2-ui-1080.zip",
                       "kind":  "ui",
                       "files":  1510,
-                      "bytes":  101600593,
-                      "sha256":  "80FF6670165BA52D591FE27425EE332527CE0DDC09DB73354684050A280A6479",
+                      "bytes":  101600720,
+                      "sha256":  "AAD92F680876255EA98BD4CFEC0EA5E71EA6FEBB3BAAD1D2260D74DE2A553800",
                       "height":  1080,
                       "width":  1920
                   },
                   {
-                      "file":  "AA2004-Remastered-HD-1.1-ui-1440.zip",
+                      "file":  "AA2004-Remastered-HD-1.2-ui-1440.zip",
                       "kind":  "ui",
                       "files":  1510,
-                      "bytes":  124181432,
-                      "sha256":  "3A4D225A4614AE6A4A76F44EC6CE57E548DB2788867D2929BB6294D71846860A",
+                      "bytes":  124181581,
+                      "sha256":  "911254C992A26E1F463FA0315FC9FC7789B6DE85488A5A8699EBCE9724C0F46E",
                       "height":  1440,
                       "width":  2560
                   },
                   {
-                      "file":  "AA2004-Remastered-HD-1.1-ui-2160.zip",
+                      "file":  "AA2004-Remastered-HD-1.2-ui-2160.zip",
                       "kind":  "ui",
                       "files":  2260,
-                      "bytes":  391701764,
-                      "sha256":  "6F5C527F084ED12B0DA69C5B8DC0BD0A8B83F7258BB062996F79973FDF771BCD",
+                      "bytes":  391702099,
+                      "sha256":  "C363CDA40B3FBD576D5C67B3959D4CE61B24F552ECC0815FF09CF86428000FF5",
                       "height":  2160,
                       "width":  3840
                   },
                   {
-                      "file":  "AA2004-Remastered-HD-1.1-icons.zip",
+                      "file":  "AA2004-Remastered-HD-1.2-icons.zip",
                       "kind":  "icons",
-                      "files":  492,
-                      "bytes":  587808548,
-                      "sha256":  "B00B3C13FBC1E6040CDE00E0453D68CF21888CD7C9D62186D2F2825799EF1F5E"
+                      "files":  517,
+                      "bytes":  588553088,
+                      "sha256":  "7EC0885281CBFFA77F5BCE4BDFC3962F0E9C3E98A8DF9B8993C5606A800F923B"
                   }
               ]
 }
