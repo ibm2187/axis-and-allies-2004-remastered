@@ -36,7 +36,7 @@ GROUPS = {
     "units/": (4, 1024), "doodads/": (4, 1024), "shared/": (4, 1024), "roads/": (4, 1024),
     "bridges/": (4, 1024), "projectiles/": (4, 512), "weather/": (4, 512), "flares/": (4, 1024),
     "specialops/": (4, 1024), "special/": (4, 512), "terrain/": (4, 512),
-    "buildings/": (2, 1024), "metagame/": (2, 2048), "effects/": (2, 512), "trailers/": (2, 1024),
+    "buildings/": (4, 1024), "metagame/": (4, 2048), "effects/": (2, 512), "trailers/": (2, 1024),
     "generals/": (2, 1024), "cutscene/": (2, 2048), "textures/": (2, 1024),
 }
 SEAMLESS = ("terrain/", "roads/")  # tiling textures: upscaled as a 3x3 wrap so edges still meet

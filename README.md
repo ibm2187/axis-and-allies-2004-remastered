@@ -54,11 +54,11 @@ UI textures are referenced as `/UI/%s/...`; `AA.exe` fills `%s` with the screen 
 
 | Art | Factor | Cap |
 | --- | --- | --- |
-| Units, doodads, shared models, roads, bridges, flares, special ops | 4x | 1024 px |
+| Units, buildings, campaign world map, doodads, shared models, roads, bridges, flares, special ops | 4x | 1024 px (world map 2048) |
 | Terrain ground tiles (409 TGA) and water frames, upscaled as a 3x3 wrap so they still tile | 4x | 512 px |
-| Buildings, campaign world map, effects, trailers, generals, cutscene | 2x | 1024-2048 px |
+| Effects, trailers, generals, cutscene | 2x | 512-2048 px |
 
-Buildings and the world map get 2x because they are the bulk of the art: at 4x their textures would need several hundred MB more memory in a 32-bit process. Factors are in `GROUPS` at the top of the script. The ground is TGA, not DDS (the terrain DDS files are only water animation frames); those tiles are written back as 32-bit TGA, and because Real-ESRGAN smooths fine grain such as grass and sand flat, the high frequencies of a plain Lanczos upscale are blended back in proportion to the detail lost (rock and cracks, which the model sharpens, are left alone). The engine blends terrain on the GPU into the terrain texture pool, so bigger tiles are safe. Listed in `data/textures-generated.txt`.
+4x is the model's native factor; more (8x, 16x) would only re-enlarge its output or be shrunk away again by mipmapping at 4K, and would multiply memory use in a 32-bit process with a 2 GB texture budget. Buildings get 4x because zoomed in they are ~1000 px wide on a 4K screen. Factors are in `GROUPS` at the top of the script. The ground is TGA, not DDS (the terrain DDS files are only water animation frames); those tiles are written back as 32-bit TGA, and because Real-ESRGAN smooths fine grain such as grass and sand flat, the high frequencies of a plain Lanczos upscale are blended back in proportion to the detail lost (rock and cracks, which the model sharpens, are left alone). The engine blends terrain on the GPU into the terrain texture pool, so bigger tiles are safe. Listed in `data/textures-generated.txt`.
 
 The mouse cursor frames (32x32) are upscaled by screen height / 1080 (2x at 2160) with their `hotspot_offset` scaled to match (`data/Cursors/`), by `upscale_ui.py --cursor-scale`.
 
