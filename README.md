@@ -1,4 +1,4 @@
-# Axis & Allies (2004) Modernization
+# Axis & Allies (2004) Remastered
 
 Mod files, tools and an installer that make TimeGate's *Axis & Allies* (2004 RTS, v1.0.5.0, build 4129.7) run well on Windows 11 at 4K. No game files are included; you need your own copy.
 
