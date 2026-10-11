@@ -2,8 +2,9 @@
 #
 #   pwsh -ExecutionPolicy Bypass -File install.ps1 -GameDir "C:\path\to\Game Files"
 #
-# Steps: copy mod/ files, generate font overrides, generate widescreen UI overrides for -Aspect
-# (default 16:9; use 4:3 to restore the original layout space), set the 4 GB large-address-aware
+# Steps: copy mod/ files, generate font overrides, upscale the UI art for -UiArt (default
+# 3840x2160, the screen mode it is made for; 'off' removes it), generate widescreen UI overrides
+# for -Aspect (default 16:9; use 4:3 to restore the original layout space), set the 4 GB large-address-aware
 # flag and byte patches on AA.exe, mark AA.exe DPI-aware for the current user, install dgVoodoo2
 # (D3D9 -> D3D11) and stage DXVK.
 param(
@@ -11,6 +12,9 @@ param(
   [string]$DgVoodooVersion = '2.87.5',
   [string]$DxvkVersion = '3.1.1',
   [string]$Aspect = '16:9',
+  [string]$UiArt = '3840x2160',
+  [string]$EsrganVersion = '0.2.5.0',
+  [string]$EsrganBuild = '20220424',
   [switch]$SkipWrappers
 )
 $ErrorActionPreference = 'Stop'
@@ -45,6 +49,32 @@ try {
   if ($LASTEXITCODE) { throw 'fonts.py failed' }
 }
 finally { Remove-Item -Recurse -Force $fontTmp -ErrorAction SilentlyContinue }
+
+$cache = Join-Path $repo '.cache'
+$venvPy = Join-Path $cache 'venv\Scripts\python.exe'
+if (-not (Test-Path $venvPy)) {
+  Write-Host '== Python venv for image tools (Pillow, numpy)'
+  python -m venv (Join-Path $cache 'venv')
+  if ($LASTEXITCODE) { throw 'venv creation failed' }
+  & $venvPy -m pip install --quiet pillow numpy
+  if ($LASTEXITCODE) { throw 'pip install failed' }
+}
+if ($UiArt -eq 'off') {
+  Write-Host '== High-resolution UI art: removing'
+  & $venvPy -I (Join-Path $repo 'tools\upscale_ui.py') $GameDir --clean
+} else {
+  $w, $h = $UiArt -split 'x'
+  Write-Host "== High-resolution UI art for ${w}x${h} (Real-ESRGAN; first run takes a few minutes)"
+  $esrgan = Join-Path $cache 'esrgan\realesrgan-ncnn-vulkan.exe'
+  if (-not (Test-Path $esrgan)) {
+    $zip = Join-Path $cache 'esrgan.zip'
+    Invoke-WebRequest "https://github.com/xinntao/Real-ESRGAN/releases/download/v$EsrganVersion/realesrgan-ncnn-vulkan-$EsrganBuild-windows.zip" -OutFile $zip
+    Expand-Archive $zip (Join-Path $cache 'esrgan') -Force
+    Remove-Item $zip
+  }
+  & $venvPy -I (Join-Path $repo 'tools\upscale_ui.py') $GameDir --esrgan $esrgan --width $w --height $h
+}
+if ($LASTEXITCODE) { throw 'upscale_ui.py failed' }
 
 Write-Host "== Widescreen UI ($Aspect)"
 python -I (Join-Path $repo 'tools\widescreen.py') $GameDir --aspect $Aspect

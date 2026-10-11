@@ -318,6 +318,11 @@ def main():
             if skin.has(f"{v}/Background.tga"):
                 slice_background(skin.read(f"{v}/Background.tga"), write, game / "skins" / nation, v)
         skin.close()
+    # generated art sets (upscale_ui.py writes UI/<screen width>/... as loose files)
+    for root in [out] + [game / "skins" / n for n in NATIONS]:
+        for bg in root.glob("UI/*/Game/ControlPanel/Background.tga"):
+            if bg.parent.parent.parent.name.isdigit() and bg.parent.parent.parent.name not in ("800", "1280"):
+                slice_background(bg.read_bytes(), write, root, bg.parent.relative_to(root).as_posix())
     save_manifest()
     print(f"wrote {len(written)} files (layouts, settings, control panel slices for default + {len(NATIONS)} skins)")
 

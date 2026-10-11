@@ -10,7 +10,7 @@ Plan and full change log: [modernization plan doc](https://claude.ai/code/artifa
 pwsh -ExecutionPolicy Bypass -File install.ps1 -GameDir "C:\path\to\Game Files"
 ```
 
-Requires Python 3 on `PATH` (for the `AA.exe` header patch) and internet access (to download dgVoodoo2 and DXVK from their GitHub releases).
+Requires Python 3 on `PATH` and internet access (to download dgVoodoo2, DXVK, Liberation Sans and Real-ESRGAN from their official releases, and Pillow/numpy from PyPI). The UI art step needs a Vulkan GPU.
 
 ## What it changes
 
@@ -37,10 +37,18 @@ The engine lays the UI out in a virtual `InterfacePositioningWidth` x `Interface
 
 Generated files are listed in `data/widescreen-generated.txt` and removed on the next run; `install.ps1 -Aspect 4:3` restores the original layout. Pick 3840x2160 (or any 16:9 mode) in Options. dgVoodoo also adds the largest 4:3 mode (2880x2160 on 4K) if you prefer the original layout pillarboxed.
 
+## High-resolution UI art
+
+UI textures are referenced as `/UI/%s/...`; `AA.exe` fills `%s` with the screen width and falls back to the base art (made for 1024x768) when that folder is missing, so at 4K the game used to magnify the base art 2.8x with nearest filtering. The 800 and 1280 sets are the base art rescaled by width/1024, tiled borders included. `tools/upscale_ui.py` (run by `install.ps1 -UiArt 3840x2160`) builds a `3840` set the same way: base size x screenH/768 (2.8125), rounded up to powers of two (the engine stretches every texture to that on load anyway), from the 1280 art where it exists, through Real-ESRGAN `realesrgan-x4plus` (RGB and alpha separately) and Lanczos. Covers ~1,500 textures: menus, HUD, dialogs, campaign map UI, tech/property icons, and each nation skin's versions.
+
+- Real-ESRGAN ncnn-vulkan (BSD-3) is downloaded once into `.cache/esrgan`; a venv with Pillow and numpy into `.cache/venv`; 4x results are cached in `.cache/upscale` by source hash, so re-runs take seconds. First run ~2.5 minutes on an RX 9070 XT.
+- Loose files under `data/**/3840/` and `skins/<nation>/**/3840/`, listed in `data/upscale-generated.txt`; `install.ps1 -UiArt off` removes them.
+- Not covered yet: textures the game references by a fixed path (unit command icons, minimap icons, unit banners, message icons); some are drawn in the 3D world, where a bigger texture might change their size.
+
 ## Layout
 
 - `mod/` — files copied into the game folder as-is. Loose files under `data/` override the same paths inside `Data.rwd`.
-- `tools/` — `rwd.ps1` (list/extract `.rwd` archives), `laa.py`, `ttfinfo.py`, `tga2png.py`, `capture_menu.ps1` (launch + screenshot main menu), `peinfo.ps1`, `aa_re.py` (strings/constants/xrefs/disassembly, needs capstone), `memscan.py` (read-only memory scan of a running AA.exe, incl. `ves` to list top-level UI elements), `rwd.py` (Python archive reader), `fonts.py` (font overrides), `exe_patch.py` (checked, reversible AA.exe byte patches), `widescreen.py` (widescreen UI generator), `ui_layout.py` (index UI layout entries / match them to runtime elements).
+- `tools/` — `rwd.ps1` (list/extract `.rwd` archives), `laa.py`, `ttfinfo.py`, `tga2png.py`, `capture_menu.ps1` (launch + screenshot main menu), `peinfo.ps1`, `aa_re.py` (strings/constants/xrefs/disassembly, needs capstone), `memscan.py` (read-only memory scan of a running AA.exe, incl. `ves` to list top-level UI elements), `rwd.py` (Python archive reader), `fonts.py` (font overrides), `exe_patch.py` (checked, reversible AA.exe byte patches), `widescreen.py` (widescreen UI generator), `upscale_ui.py` (high-resolution UI art set), `ui_layout.py` (index UI layout entries / match them to runtime elements).
 
 ## Engine notes
 
