@@ -5,8 +5,9 @@
 # Steps: copy mod/ files, generate font overrides, upscale the UI art for -UiArt (default
 # 3840x2160, the screen mode it is made for; 'off' removes it), generate widescreen UI overrides
 # for -Aspect (default 16:9; use 4:3 to restore the original layout space), raise rendering
-# settings for -Graphics (default high; 'off' restores the game's defaults), set the 4 GB large-address-aware
-# flag and byte patches on AA.exe, mark AA.exe DPI-aware for the current user, install dgVoodoo2
+# settings and relight the maps for -Graphics (default high; 'off' restores the game's defaults), render
+# at 2x and downsample for -Supersample 2x (default off), set the 4 GB large-address-aware flag and
+# byte patches on AA.exe (text size, zoom limits), mark AA.exe DPI-aware for the current user, install dgVoodoo2
 # (D3D9 -> D3D11) and stage DXVK.
 param(
   [Parameter(Mandatory)][string]$GameDir,
@@ -16,6 +17,7 @@ param(
   [string]$UiArt = '3840x2160',
   [ValidateSet('high', 'off')][string]$Graphics = 'high',
   [ValidateSet('on', 'off')][string]$Textures = 'on',
+  [ValidateSet('off', '2x')][string]$Supersample = 'off',
   [string]$TexconvRelease = 'may2026',
   [string]$UpscaylModelsRelease = 'v2.15.0',
   [string]$EsrganVersion = '0.2.5.0',
@@ -36,6 +38,17 @@ Get-ChildItem $mod -Recurse -File | ForEach-Object {
   New-Item -ItemType Directory -Force (Split-Path $dest) | Out-Null
   Copy-Item $_.FullName $dest -Force
   Write-Host "   $($_.FullName.Substring($mod.Length + 1))"
+}
+if ($Supersample -ne 'off') {
+  # dgVoodoo renders at a multiple of the game's resolution and downsamples to the screen
+  $conf = Join-Path $GameDir 'dgVoodoo.conf'
+  $section = ''
+  $lines = Get-Content $conf | ForEach-Object {
+    if ($_ -match '^\[(\w+)\]') { $section = $Matches[1] }
+    if ($section -eq 'DirectX') { $_ -replace '^(Resolution\s*=\s*)unforced$', "`${1}$Supersample" } else { $_ }
+  }
+  Set-Content $conf $lines
+  Write-Host "   supersampling $Supersample"
 }
 
 Write-Host '== Fonts (crash fix, DPI-independent sizes, Liberation Sans for Arial)'
@@ -113,6 +126,8 @@ Write-Host "== Rendering settings ($Graphics)"
 $gfxArgs = @(); if ($Graphics -eq 'off') { $gfxArgs = @('--off') }
 python -I (Join-Path $repo 'tools\graphics.py') $GameDir @gfxArgs
 if ($LASTEXITCODE) { throw 'graphics.py failed' }
+python -I (Join-Path $repo 'tools\lighting.py') $GameDir @gfxArgs
+if ($LASTEXITCODE) { throw 'lighting.py failed' }
 
 Write-Host '== Large-address-aware flag'
 python -I (Join-Path $repo 'tools\laa.py') $exe --set
