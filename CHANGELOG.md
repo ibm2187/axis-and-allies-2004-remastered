@@ -16,6 +16,7 @@ The first release meant for other players: one double-click to install, nothing 
   sets for 1080, 1440 and 2160 screen heights; the nearest one is used and renamed for the
   player's screen width.
 - Re-running the installer updates an existing install (or one made by the earlier scripts) in place.
+- MIT licence for the code (`LICENSE`); the HD pack keeps its own non-commercial terms.
 - Uninstall restores everything: original `AA.exe` bytes, no loose files left behind, the registry
   flag removed and the game resolution the player had before.
 

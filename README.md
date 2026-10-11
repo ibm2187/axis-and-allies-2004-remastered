@@ -165,6 +165,10 @@ back in.
 
 ## Credits and licences
 
+The mod's code and documentation are under the [MIT License](LICENSE). The HD art pack is not: it
+is derived from the game's own art and made with CC BY-NC-SA 4.0 models, so it is for
+non-commercial use only and you need your own copy of the game.
+
 - [dgVoodoo2](https://github.com/dege-diosg/dgVoodoo2) by Dege (freeware), downloaded at install time.
 - [Liberation Sans](https://github.com/liberationfonts/liberation-fonts) (SIL Open Font License 1.1), downloaded at install time.
 - HD art made with [Real-ESRGAN ncnn-vulkan](https://github.com/xinntao/Real-ESRGAN) (BSD-3-Clause),
