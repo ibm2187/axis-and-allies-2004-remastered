@@ -17,7 +17,7 @@ param(
   [string]$UiArt = '3840x2160',
   [ValidateSet('high', 'off')][string]$Graphics = 'high',
   [ValidateSet('on', 'off')][string]$Textures = 'on',
-  [ValidateSet('off', '2x')][string]$Supersample = 'off',
+  [ValidateSet('off', '2x')][string]$Supersample = 'off',  # 2x at 4K costs mouse responsiveness (v-sync)
   [string]$TexconvRelease = 'may2026',
   [string]$UpscaylModelsRelease = 'v2.15.0',
   [string]$EsrganVersion = '0.2.5.0',
