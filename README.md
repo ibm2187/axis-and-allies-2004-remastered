@@ -43,7 +43,9 @@ UI textures are referenced as `/UI/%s/...`; `AA.exe` fills `%s` with the screen 
 
 - Real-ESRGAN ncnn-vulkan (BSD-3) is downloaded once into `.cache/esrgan`; a venv with Pillow and numpy into `.cache/venv`; 4x results are cached in `.cache/upscale` by source hash, so re-runs take seconds. First run ~2.5 minutes on an RX 9070 XT.
 - Loose files under `data/**/3840/` and `skins/<nation>/**/3840/`, listed in `data/upscale-generated.txt`; `install.ps1 -UiArt off` removes them.
-- Not covered yet: textures the game references by a fixed path (unit command icons, minimap icons, unit banners, message icons); some are drawn in the 3D world, where a bigger texture might change their size.
+- Icons the game loads by a fixed path are replaced in place at the same size factor (`--no-inplace` skips them): recruit and building buttons, tech, property, ability and denizen icons, message-log icons.
+- PNGs are written with a single `IDAT` chunk: the game's loader reads only the first one (every shipped PNG has one), and multi-chunk files rendered as garbage.
+- Not covered yet: minimap icons, unit banners over the map, nation emblems, unit cards; some are drawn in the 3D world or at their texture's pixel size.
 
 ## Layout
 
