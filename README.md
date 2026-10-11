@@ -105,6 +105,7 @@ src/Features/<Feature>/        Compatibility, Renderer, Fonts, HdArt, Widescreen
 src/Shared/                    TGCK archive reader, zlib/TGA, tracked game files, engine settings
                                files, AA.exe byte patches, downloads, game folder discovery
 dev/                           reverse-engineering tools (Python/PowerShell, maintainer only)
+docs/                          engine research and design notes (docs/lighting-engine.md)
 ```
 
 The installer only uses Windows PowerShell 5.1. Python is needed only to build the HD pack and for
@@ -158,6 +159,8 @@ back in.
 - Fonts: size = `size * screenH / InterfacePositioningHeight`, created with GDI+ in points, so at
   150% Windows scaling glyphs came out 1.5x larger than their cells.
 - Every map embeds its own light (`SUN` entry); the `Sun/*.tgi` presets are not used.
+- Lighting is fixed-function Direct3D 9, per vertex, one sun; the only shaders are three `vs_1_1`
+  vertex shaders. Details, evidence and the rewrite plan: [docs/lighting-engine.md](docs/lighting-engine.md).
 - The gameplay zoom limits are vars registered with flag 2 (not overridable from `AVars.tgi`).
 - UI art: transparency is on/off (any alpha above 0 draws opaque). `ViewQualityExtreme` switches texture shadows to projected ones, which render as solid black boxes under dgVoodoo.
 - The terrain texture pool must be 1024 px or the HD ground tiles don't show; forced MSAA in
