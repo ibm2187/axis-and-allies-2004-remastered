@@ -32,6 +32,7 @@ import zlib
 import numpy as np
 from PIL import Image
 
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[3] / "Shared"))
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
 from rwd import Rwd  # noqa: E402
 
@@ -169,16 +170,18 @@ def main():
     ap.add_argument("--esrgan")
     ap.add_argument("--width", type=int, default=3840)
     ap.add_argument("--height", type=int, default=2160)
-    ap.add_argument("--cache", default=str(pathlib.Path(__file__).resolve().parent.parent / ".cache" / "upscale"))
+    ap.add_argument("--cache", default=str(pathlib.Path(__file__).resolve().parents[4] / ".cache" / "upscale"))
     ap.add_argument("--clean", action="store_true", help="only remove previously generated files")
+    ap.add_argument("--out", help="write under this folder instead of the game folder (HD pack staging)")
     ap.add_argument("--no-inplace", action="store_true", help="skip the fixed-path icons")
     ap.add_argument("--cursor-scale", type=int, help="mouse cursor size factor (default: screen height / 1080)")
     a = ap.parse_args()
     game = pathlib.Path(a.game_dir)
-    manifest = game / "data" / "upscale-generated.txt"
+    root = pathlib.Path(a.out) if a.out else game
+    manifest = root / "data" / "upscale-generated.txt"
     if manifest.exists():
         for rel in manifest.read_text(encoding="utf-8").splitlines():
-            (game / rel).unlink(missing_ok=True)
+            (root / rel).unlink(missing_ok=True)
         manifest.unlink()
     if a.clean:
         print("removed generated high-resolution UI art")
@@ -190,8 +193,8 @@ def main():
     folder = str(a.width)
     data = Rwd(game / "Data.rwd")
     paths = set_paths(data)
-    archives = [("data", data, game / "data")] + [
-        (n, Rwd(game / "skins" / f"{n}.rwd"), game / "skins" / n) for n in NATIONS if (game / "skins" / f"{n}.rwd").exists()]
+    archives = [("data", data, root / "data")] + [
+        (n, Rwd(game / "skins" / f"{n}.rwd"), root / "skins" / n) for n in NATIONS if (game / "skins" / f"{n}.rwd").exists()]
 
     # plan: (output path, source image, target size)
     plan = []
@@ -243,7 +246,7 @@ def main():
         for n in data.names():
             if n.lower().startswith("cursors/") and n.lower().endswith(".tga"):
                 src = load(data.read(n))
-                plan.append((game / "data" / n, src, (src.size[0] * cursor_scale, src.size[1] * cursor_scale)))
+                plan.append((root / "data" / n, src, (src.size[0] * cursor_scale, src.size[1] * cursor_scale)))
     print(f"{n_set} textures for the {folder} set (x{scale:.4g} of the base art), {n_icons} icons in place, "
           f"{len(plan) - n_set - n_icons} cursor frames x{cursor_scale}")
 
@@ -263,14 +266,14 @@ def main():
             text = data.read(n).decode("latin-1")
             text = re.sub(r"(hotspot_offset\s*=\s*)(\d+)\s*,\s*(\d+)",
                           lambda m: f"{m.group(1)}{int(m.group(2)) * cursor_scale}, {int(m.group(3)) * cursor_scale}", text)
-            out = game / "data" / n
+            out = root / "data" / n
             out.parent.mkdir(parents=True, exist_ok=True)
             out.write_bytes(text.encode("latin-1"))
             written.append(out)
     for _, arc, _ in archives:
         arc.close()
     manifest.parent.mkdir(parents=True, exist_ok=True)
-    manifest.write_text("\n".join(str(p.relative_to(game)) for p in written) + "\n", encoding="utf-8")
+    manifest.write_text("\n".join(str(p.relative_to(root)) for p in written) + "\n", encoding="utf-8")
     print(f"wrote {len(written)} files")
 
 

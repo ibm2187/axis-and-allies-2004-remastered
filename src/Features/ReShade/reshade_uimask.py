@@ -15,9 +15,12 @@ import sys
 import numpy as np
 from PIL import Image, ImageFilter
 
-sys.path.insert(0, str(pathlib.Path(__file__).parent))
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2] / "Shared"))
 from rwd import Rwd  # noqa: E402
-from widescreen import CUTS, NATIONS  # noqa: E402
+
+# control panel cuts and nations of the Widescreen slice (src/Features/Widescreen/Widescreen.ps1)
+CUTS = [0, 320, 448, 624, 792, 1024]
+NATIONS = ["USA", "GBR", "GER", "RUS", "JPN"]
 
 PANEL_TOP = 768 - 257          # control_panel.tgi: T = 257b
 RECTS = [                      # layout units (x0, y0, x1, y1), measured from in-game screenshots

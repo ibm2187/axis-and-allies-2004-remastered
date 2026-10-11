@@ -1,9 +1,11 @@
-# Never commit copyrighted game files or third-party binaries
+# Never commit copyrighted game files, third-party binaries or the HD pack (derived game art)
 *.exe
 *.dll
 *.rwd
 *.dmp
 *.log
+*.zip
 __pycache__/
 extract/
 .cache/
+logs/

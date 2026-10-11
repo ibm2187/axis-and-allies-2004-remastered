@@ -24,6 +24,7 @@ import tempfile
 import numpy as np
 from PIL import Image
 
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[3] / "Shared"))
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
 from rwd import Rwd  # noqa: E402
 from upscale_ui import write_tga  # noqa: E402
@@ -133,14 +134,16 @@ def main():
     ap.add_argument("--esrgan")
     ap.add_argument("--texconv")
     ap.add_argument("--only", nargs="*", default=[], help="limit to these path prefixes (default: all GROUPS)")
-    ap.add_argument("--cache", default=str(pathlib.Path(__file__).resolve().parent.parent / ".cache" / "upscale3d"))
+    ap.add_argument("--cache", default=str(pathlib.Path(__file__).resolve().parents[4] / ".cache" / "upscale3d"))
     ap.add_argument("--clean", action="store_true")
+    ap.add_argument("--out", help="write under this folder instead of the game folder (HD pack staging)")
     a = ap.parse_args()
     game = pathlib.Path(a.game_dir)
-    manifest = game / "data" / "textures-generated.txt"
+    root = pathlib.Path(a.out) if a.out else game
+    manifest = root / "data" / "textures-generated.txt"
     if manifest.exists():
         for rel in manifest.read_text(encoding="utf-8").splitlines():
-            (game / rel).unlink(missing_ok=True)
+            (root / rel).unlink(missing_ok=True)
         manifest.unlink()
     if a.clean:
         print("removed upscaled model textures")
@@ -204,7 +207,7 @@ def main():
                 out = restore_grain(out, im, size)
             out.putalpha(scale_alpha(im.getchannel("A"), size))
             if fmt == "TGA":
-                dest = game / "data" / n
+                dest = root / "data" / n
                 dest.parent.mkdir(parents=True, exist_ok=True)
                 write_tga(out, dest)
                 written.append(dest)
@@ -222,11 +225,11 @@ def main():
             if r.returncode:
                 raise SystemExit(f"texconv failed:\n{r.stdout[-2000:]}{r.stderr[-2000:]}")
             for p, n in items:
-                dest = game / "data" / n
+                dest = root / "data" / n
                 dest.parent.mkdir(parents=True, exist_ok=True)
                 dest.write_bytes((od / (p.stem + ".dds")).read_bytes())
                 written.append(dest)
-    manifest.write_text("\n".join(str(p.relative_to(game)) for p in written) + "\n", encoding="utf-8")
+    manifest.write_text("\n".join(str(p.relative_to(root)) for p in written) + "\n", encoding="utf-8")
     print(f"wrote {len(written)} textures")
 
 
