@@ -40,6 +40,13 @@ GROUPS = {
     "generals/": (2, 1024), "cutscene/": (2, 2048), "textures/": (2, 1024),
 }
 SEAMLESS = ("terrain/", "roads/")  # tiling textures: upscaled as a 3x3 wrap so edges still meet
+# Upscaling model per prefix (ncnn models in the Real-ESRGAN models folder; see install.ps1).
+# Compared on grass, rock, sand, a building atlas, a tank and a world-map piece: realesrgan-x4plus
+# (a photo model) smooths grain flat, Remacri adds a crosshatch lattice, NMKD Siax checker noise,
+# Nomos8kSC stays soft. UltraMix Balanced gives the most natural ground (grass blades, sand
+# ripples); UltraSharp the cleanest objects. Both CC BY-NC-SA 4.0 (non-commercial use).
+MODELS = {"terrain/": "ultramix-balanced-4x", "roads/": "ultramix-balanced-4x"}
+DEFAULT_MODEL = "ultrasharp-4x"
 # The ground itself is TGA (terrain *.tgi "texture = X/Y.tga"); the terrain DDS files are only
 # water animation frames. TGAs are written back as 32-bit TGA (the terrain pool makes mipmaps).
 TGA_GROUPS = ("terrain/",)
@@ -61,9 +68,10 @@ def wrap3(im):
     return out
 
 
-def esrgan_rgb(images, esrgan, cache, seamless=()):
-    """images: {sha: RGB image} -> {sha: 4x RGB image}, cached by sha. Shas in `seamless` are
-    upscaled as a 3x3 tiling and the centre is kept, so the result still tiles."""
+def esrgan_rgb(images, esrgan, cache, seamless=(), model="realesrgan-x4plus"):
+    """images: {sha: RGB image} -> {sha: 4x RGB image}, cached by sha (the sha includes the
+    model). Shas in `seamless` are upscaled as a 3x3 tiling and the centre is kept, so the
+    result still tiles."""
     cache.mkdir(parents=True, exist_ok=True)
     todo = {s: im for s, im in images.items() if not (cache / f"{s}.png").exists()}
     if todo:
@@ -72,8 +80,8 @@ def esrgan_rgb(images, esrgan, cache, seamless=()):
             src.mkdir(), dst.mkdir()
             for s, im in todo.items():
                 (wrap3(im) if s in seamless else im).save(src / f"{s}.png")
-            print(f"  Real-ESRGAN x4 on {len(todo)} images ...", flush=True)
-            r = subprocess.run([str(esrgan), "-i", str(src), "-o", str(dst), "-n", "realesrgan-x4plus", "-t", "256", "-f", "png"],
+            print(f"  {model} x4 on {len(todo)} images ...", flush=True)
+            r = subprocess.run([str(esrgan), "-i", str(src), "-o", str(dst), "-n", model, "-s", "4", "-t", "256", "-f", "png"],
                                cwd=pathlib.Path(esrgan).parent, capture_output=True, text=True)
             missing = [s for s in todo if not (dst / f"{s}.png").exists()]
             if r.returncode or missing:
@@ -84,7 +92,8 @@ def esrgan_rgb(images, esrgan, cache, seamless=()):
                     w, h = im.size[0] * 4, im.size[1] * 4
                     big = big.crop((w, h, 2 * w, 2 * h))
                 big.save(cache / f"{s}.png")
-    return {s: Image.open(cache / f"{s}.png").convert("RGB") for s in images}
+    # paths, not images: holding thousands of decoded 4x images ran a 31 GB machine out of RAM
+    return {s: cache / f"{s}.png" for s in images}
 
 
 def restore_grain(ai, src, size):
@@ -168,23 +177,29 @@ def main():
         if k == 1 or min(w, h) < 8:
             skipped += 1
             continue
-        plan.append((n, fmt, im, (w * k, h * k), low.startswith(SEAMLESS)))
+        model = next((m for p, m in MODELS.items() if low.startswith(p)), DEFAULT_MODEL)
+        plan.append((n, fmt, im, (w * k, h * k), low.startswith(SEAMLESS), model))
     print(f"{len(plan)} textures to upscale ({skipped} skipped: small, at the size cap or unreadable)")
 
-    def key(im, seamless):
-        return hashlib.sha1(im.tobytes() + str(im.size).encode() + (b"wrap" if seamless else b"")).hexdigest()
+    def key(im, seamless, model):
+        return hashlib.sha1(im.tobytes() + str(im.size).encode() + (b"wrap" if seamless else b"")
+                            + model.encode()).hexdigest()
 
-    rgb = {key(im, sl): im.convert("RGB") for _, _, im, _, sl in plan}
-    wrap = {key(im, sl) for _, _, im, _, sl in plan if sl}
-    big = esrgan_rgb(rgb, pathlib.Path(a.esrgan), pathlib.Path(a.cache), wrap)
+    big = {}
+    for model in sorted({p[5] for p in plan}):
+        items = [p for p in plan if p[5] == model]
+        rgb = {key(im, sl, model): im.convert("RGB") for _, _, im, _, sl, _ in items}
+        wrap = {key(im, sl, model) for _, _, im, _, sl, _ in items if sl}
+        big.update(esrgan_rgb(rgb, pathlib.Path(a.esrgan), pathlib.Path(a.cache), wrap, model))
 
     written = []
     with tempfile.TemporaryDirectory() as tmp:
         tmp = pathlib.Path(tmp)
         by_fmt = {}
-        for i, (n, fmt, im, size, sl) in enumerate(plan):
-            s = key(im, sl)
-            out = big[s].resize(size, Image.LANCZOS)
+        for i, (n, fmt, im, size, sl, model) in enumerate(plan):
+            s = key(im, sl, model)
+            with Image.open(big[s]) as b:
+                out = b.convert("RGB").resize(size, Image.LANCZOS)
             if fmt == "TGA":  # terrain ground tiles
                 out = restore_grain(out, im, size)
             out.putalpha(scale_alpha(im.getchannel("A"), size))

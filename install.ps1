@@ -17,6 +17,7 @@ param(
   [ValidateSet('high', 'off')][string]$Graphics = 'high',
   [ValidateSet('on', 'off')][string]$Textures = 'on',
   [string]$TexconvRelease = 'may2026',
+  [string]$UpscaylModelsRelease = 'v2.15.0',
   [string]$EsrganVersion = '0.2.5.0',
   [string]$EsrganBuild = '20220424',
   [switch]$SkipWrappers
@@ -69,6 +70,17 @@ if (($UiArt -ne 'off' -or $Textures -ne 'off') -and -not (Test-Path $esrgan)) {
   Invoke-WebRequest "https://github.com/xinntao/Real-ESRGAN/releases/download/v$EsrganVersion/realesrgan-ncnn-vulkan-$EsrganBuild-windows.zip" -OutFile $zip
   Expand-Archive $zip (Join-Path $cache 'esrgan') -Force
   Remove-Item $zip
+}
+if ($Textures -ne 'off') {
+  # texture models for upscale_textures.py (ncnn format, CC BY-NC-SA 4.0: non-commercial use)
+  foreach ($m in 'ultrasharp-4x', 'ultramix-balanced-4x') {
+    foreach ($ext in 'param', 'bin') {
+      $f = Join-Path $cache "esrgan\models\$m.$ext"
+      if (-not (Test-Path $f)) {
+        Invoke-WebRequest "https://raw.githubusercontent.com/upscayl/upscayl/$UpscaylModelsRelease/resources/models/$m.$ext" -OutFile $f
+      }
+    }
+  }
 }
 if ($UiArt -eq 'off') {
   Write-Host '== High-resolution UI art: removing'
