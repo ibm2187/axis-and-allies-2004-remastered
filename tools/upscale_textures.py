@@ -26,6 +26,7 @@ from PIL import Image
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
 from rwd import Rwd  # noqa: E402
+from upscale_ui import write_tga  # noqa: E402
 
 FORMATS = {b"DXT1": "BC1_UNORM", b"DXT3": "BC2_UNORM", b"DXT5": "BC3_UNORM"}
 
@@ -39,6 +40,9 @@ GROUPS = {
     "generals/": (2, 1024), "cutscene/": (2, 2048), "textures/": (2, 1024),
 }
 SEAMLESS = ("terrain/", "roads/")  # tiling textures: upscaled as a 3x3 wrap so edges still meet
+# The ground itself is TGA (terrain *.tgi "texture = X/Y.tga"); the terrain DDS files are only
+# water animation frames. TGAs are written back as 32-bit TGA (the terrain pool makes mipmaps).
+TGA_GROUPS = ("terrain/",)
 
 
 def dds_format(blob):
@@ -83,6 +87,26 @@ def esrgan_rgb(images, esrgan, cache, seamless=()):
     return {s: Image.open(cache / f"{s}.png").convert("RGB") for s in images}
 
 
+def restore_grain(ai, src, size):
+    """Real-ESRGAN reads fine noisy grain (grass, sand) as noise and smooths it flat. Put back the
+    high frequencies of a plain Lanczos upscale in proportion to how much detail was lost;
+    textures the model sharpened (rock, cracks) are left as they are."""
+    from PIL import ImageFilter
+    lanc = src.convert("RGB").resize(size, Image.LANCZOS)
+    radius = max(1, size[0] // src.size[0])
+
+    def hf(im):
+        a = np.asarray(im, np.float32)
+        return a - np.asarray(im.filter(ImageFilter.GaussianBlur(radius)), np.float32)
+    h_ai, h_l = hf(ai), hf(lanc)
+    e_ai, e_l = float((h_ai ** 2).mean()), float((h_l ** 2).mean())
+    if e_l <= 0 or e_ai >= e_l:
+        return ai
+    w = 1 - e_ai / e_l
+    out = np.asarray(ai, np.float32) + (h_l - h_ai) * w
+    return Image.fromarray(np.clip(out, 0, 255).astype(np.uint8))
+
+
 def scale_alpha(a, size):
     """Lanczos-resize alpha; binary masks stay binary."""
     arr = np.asarray(a)
@@ -123,11 +147,12 @@ def main():
     for n in sorted(data.names()):
         low = n.lower()
         group = next((g for g in GROUPS if low.startswith(g)), None)
-        if not group or not low.endswith(".dds") or (only and not low.startswith(only)):
+        is_tga = low.endswith(".tga") and group in TGA_GROUPS
+        if not group or not (low.endswith(".dds") or is_tga) or (only and not low.startswith(only)):
             continue
         scale, cap = GROUPS[group]
         blob = data.read(n)
-        fmt = dds_format(blob)
+        fmt = "TGA" if is_tga else dds_format(blob)
         if not fmt:
             skipped += 1
             continue
@@ -160,7 +185,15 @@ def main():
         for i, (n, fmt, im, size, sl) in enumerate(plan):
             s = key(im, sl)
             out = big[s].resize(size, Image.LANCZOS)
+            if fmt == "TGA":  # terrain ground tiles
+                out = restore_grain(out, im, size)
             out.putalpha(scale_alpha(im.getchannel("A"), size))
+            if fmt == "TGA":
+                dest = game / "data" / n
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                write_tga(out, dest)
+                written.append(dest)
+                continue
             p = tmp / f"{i:05d}.png"
             out.save(p)
             by_fmt.setdefault(fmt, []).append((p, n))
