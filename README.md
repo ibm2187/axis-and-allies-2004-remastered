@@ -48,10 +48,24 @@ UI textures are referenced as `/UI/%s/...`; `AA.exe` fills `%s` with the screen 
 - PNGs are written with a single `IDAT` chunk: the game's loader reads only the first one (every shipped PNG has one), and multi-chunk files rendered as garbage.
 - Kept at the shipped size (`FIXED_SIZE`): textures the game uses at their exact pixel size. Larger command-grid frames gave sheared white garbage over every button; larger minimap icons were drawn into the minimap pixel for pixel, big and white; unit banners and nation badges are combined into one image, likely the same way.
 
+## Model and terrain textures
+
+`tools/upscale_textures.py` (run by `install.ps1`, `-Textures off` removes it) upscales the DDS textures of units, buildings, doodads, terrain, roads, effects and the campaign world map. Colour goes through Real-ESRGAN `realesrgan-x4plus`; alpha does not, because most of these textures use it as a binary team-colour or cut-out mask or a soft ground blend: it is Lanczos-resized and binary masks are re-thresholded. Each texture is re-encoded by DirectXTex `texconv` (MIT, downloaded once into `.cache`) to its original format (DXT1/DXT3/DXT5) with a full mipmap chain and a DX9 header, and written as a loose override at the same path.
+
+| Art | Factor | Cap |
+| --- | --- | --- |
+| Units, doodads, shared models, roads, bridges, flares, special ops | 4x | 1024 px |
+| Terrain tiles (upscaled as a 3x3 wrap so they still tile) | 4x | 512 px |
+| Buildings, campaign world map, effects, trailers, generals, cutscene | 2x | 1024-2048 px |
+
+Buildings and the world map get 2x because they are the bulk of the art: at 4x their textures would need several hundred MB more memory in a 32-bit process. Factors are in `GROUPS` at the top of the script. Listed in `data/textures-generated.txt`.
+
+The mouse cursor frames (32x32) are upscaled by screen height / 1080 (2x at 2160) with their `hotspot_offset` scaled to match (`data/Cursors/`), by `upscale_ui.py --cursor-scale`.
+
 ## Layout
 
 - `mod/` — files copied into the game folder as-is. Loose files under `data/` override the same paths inside `Data.rwd`.
-- `tools/` — `rwd.ps1` (list/extract `.rwd` archives), `laa.py`, `ttfinfo.py`, `tga2png.py`, `capture_menu.ps1` (launch + screenshot main menu), `peinfo.ps1`, `aa_re.py` (strings/constants/xrefs/disassembly, needs capstone), `memscan.py` (read-only memory scan of a running AA.exe, incl. `ves` to list top-level UI elements), `rwd.py` (Python archive reader), `fonts.py` (font overrides), `exe_patch.py` (checked, reversible AA.exe byte patches), `widescreen.py` (widescreen UI generator), `upscale_ui.py` (high-resolution UI art set), `ui_layout.py` (index UI layout entries / match them to runtime elements).
+- `tools/` — `rwd.ps1` (list/extract `.rwd` archives), `laa.py`, `ttfinfo.py`, `tga2png.py`, `capture_menu.ps1` (launch + screenshot main menu), `peinfo.ps1`, `aa_re.py` (strings/constants/xrefs/disassembly, needs capstone), `memscan.py` (read-only memory scan of a running AA.exe, incl. `ves` to list top-level UI elements), `rwd.py` (Python archive reader), `fonts.py` (font overrides), `exe_patch.py` (checked, reversible AA.exe byte patches), `widescreen.py` (widescreen UI generator), `upscale_ui.py` (high-resolution UI art set, icons, cursor), `upscale_textures.py` (model and terrain textures), `graphics.py` (rendering settings), `ui_layout.py` (index UI layout entries / match them to runtime elements).
 
 ## Engine notes
 

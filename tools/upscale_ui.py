@@ -147,10 +147,11 @@ def upscale_all(jobs, esrgan, cache):
                 if px[..., 3].min() < 255:
                     Image.fromarray(px[..., 3]).convert("RGB").save(src / f"{s}_a.png")
             print(f"  Real-ESRGAN x4 on {len(list(src.iterdir()))} images ...", flush=True)
-            r = subprocess.run([str(esrgan), "-i", str(src), "-o", str(dst), "-n", "realesrgan-x4plus", "-f", "png"],
+            r = subprocess.run([str(esrgan), "-i", str(src), "-o", str(dst), "-n", "realesrgan-x4plus", "-t", "256", "-f", "png"],
                                cwd=pathlib.Path(esrgan).parent, capture_output=True, text=True)
-            if r.returncode:
-                raise SystemExit(f"realesrgan failed:\n{r.stderr[-2000:]}")
+            missing = [s for s in todo if not (dst / f"{s}_c.png").exists()]
+            if r.returncode or missing:
+                raise SystemExit(f"realesrgan failed ({len(missing)} outputs missing):\n{r.stderr[-2000:]}")
             for s, im in todo.items():
                 c = Image.open(dst / f"{s}_c.png").convert("RGB")
                 if (dst / f"{s}_a.png").exists():
@@ -171,6 +172,7 @@ def main():
     ap.add_argument("--cache", default=str(pathlib.Path(__file__).resolve().parent.parent / ".cache" / "upscale"))
     ap.add_argument("--clean", action="store_true", help="only remove previously generated files")
     ap.add_argument("--no-inplace", action="store_true", help="skip the fixed-path icons")
+    ap.add_argument("--cursor-scale", type=int, help="mouse cursor size factor (default: screen height / 1080)")
     a = ap.parse_args()
     game = pathlib.Path(a.game_dir)
     manifest = game / "data" / "upscale-generated.txt"
@@ -234,7 +236,16 @@ def main():
                 src = load(arc.read(hi if arc.has(hi) else n))
                 w, h = load(arc.read(n)).size
                 plan.append((out / n, src, tuple(pow2(max(1, round(v * scale))) for v in (w, h))))
-    print(f"{n_set} textures for the {folder} set (x{scale:.4g} of the base art), {len(plan) - n_set} icons in place")
+    n_icons = len(plan) - n_set
+    # mouse cursor: 32x32 frames with pixel hotspots (Cursors/*.tgi); scaled with the screen
+    cursor_scale = max(1, round(a.height / 1080)) if a.cursor_scale is None else a.cursor_scale
+    if cursor_scale > 1:
+        for n in data.names():
+            if n.lower().startswith("cursors/") and n.lower().endswith(".tga"):
+                src = load(data.read(n))
+                plan.append((game / "data" / n, src, (src.size[0] * cursor_scale, src.size[1] * cursor_scale)))
+    print(f"{n_set} textures for the {folder} set (x{scale:.4g} of the base art), {n_icons} icons in place, "
+          f"{len(plan) - n_set - n_icons} cursor frames x{cursor_scale}")
 
     jobs = {}
     for _, src, _ in plan:
@@ -247,6 +258,15 @@ def main():
         im = big[s].resize(size, Image.LANCZOS) if s in big else src.resize(size, Image.LANCZOS)
         save(im, out)
         written.append(out)
+    if cursor_scale > 1:
+        for n in ("Cursors/cursors_aa.tgi",):  # cursors.tgi is the engine's commented-out list
+            text = data.read(n).decode("latin-1")
+            text = re.sub(r"(hotspot_offset\s*=\s*)(\d+)\s*,\s*(\d+)",
+                          lambda m: f"{m.group(1)}{int(m.group(2)) * cursor_scale}, {int(m.group(3)) * cursor_scale}", text)
+            out = game / "data" / n
+            out.parent.mkdir(parents=True, exist_ok=True)
+            out.write_bytes(text.encode("latin-1"))
+            written.append(out)
     for _, arc, _ in archives:
         arc.close()
     manifest.parent.mkdir(parents=True, exist_ok=True)

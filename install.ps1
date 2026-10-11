@@ -15,6 +15,8 @@ param(
   [string]$Aspect = '16:9',
   [string]$UiArt = '3840x2160',
   [ValidateSet('high', 'off')][string]$Graphics = 'high',
+  [ValidateSet('on', 'off')][string]$Textures = 'on',
+  [string]$TexconvRelease = 'may2026',
   [string]$EsrganVersion = '0.2.5.0',
   [string]$EsrganBuild = '20220424',
   [switch]$SkipWrappers
@@ -61,22 +63,35 @@ if (-not (Test-Path $venvPy)) {
   & $venvPy -m pip install --quiet pillow numpy
   if ($LASTEXITCODE) { throw 'pip install failed' }
 }
+$esrgan = Join-Path $cache 'esrgan\realesrgan-ncnn-vulkan.exe'
+if (($UiArt -ne 'off' -or $Textures -ne 'off') -and -not (Test-Path $esrgan)) {
+  $zip = Join-Path $cache 'esrgan.zip'
+  Invoke-WebRequest "https://github.com/xinntao/Real-ESRGAN/releases/download/v$EsrganVersion/realesrgan-ncnn-vulkan-$EsrganBuild-windows.zip" -OutFile $zip
+  Expand-Archive $zip (Join-Path $cache 'esrgan') -Force
+  Remove-Item $zip
+}
 if ($UiArt -eq 'off') {
   Write-Host '== High-resolution UI art: removing'
   & $venvPy -I (Join-Path $repo 'tools\upscale_ui.py') $GameDir --clean
 } else {
   $w, $h = $UiArt -split 'x'
   Write-Host "== High-resolution UI art for ${w}x${h} (Real-ESRGAN; first run takes a few minutes)"
-  $esrgan = Join-Path $cache 'esrgan\realesrgan-ncnn-vulkan.exe'
-  if (-not (Test-Path $esrgan)) {
-    $zip = Join-Path $cache 'esrgan.zip'
-    Invoke-WebRequest "https://github.com/xinntao/Real-ESRGAN/releases/download/v$EsrganVersion/realesrgan-ncnn-vulkan-$EsrganBuild-windows.zip" -OutFile $zip
-    Expand-Archive $zip (Join-Path $cache 'esrgan') -Force
-    Remove-Item $zip
-  }
   & $venvPy -I (Join-Path $repo 'tools\upscale_ui.py') $GameDir --esrgan $esrgan --width $w --height $h
 }
 if ($LASTEXITCODE) { throw 'upscale_ui.py failed' }
+
+if ($Textures -eq 'off') {
+  Write-Host '== Model and terrain textures: removing'
+  & $venvPy -I (Join-Path $repo 'tools\upscale_textures.py') $GameDir --clean
+} else {
+  Write-Host '== Model and terrain textures (Real-ESRGAN + texconv; first run takes a while)'
+  $texconv = Join-Path $cache 'texconv.exe'
+  if (-not (Test-Path $texconv)) {
+    Invoke-WebRequest "https://github.com/microsoft/DirectXTex/releases/download/$TexconvRelease/texconv.exe" -OutFile $texconv
+  }
+  & $venvPy -I (Join-Path $repo 'tools\upscale_textures.py') $GameDir --esrgan $esrgan --texconv $texconv
+}
+if ($LASTEXITCODE) { throw 'upscale_textures.py failed' }
 
 Write-Host "== Widescreen UI ($Aspect)"
 python -I (Join-Path $repo 'tools\widescreen.py') $GameDir --aspect $Aspect
