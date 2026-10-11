@@ -4,7 +4,8 @@
 #
 # Steps: copy mod/ files, generate font overrides, upscale the UI art for -UiArt (default
 # 3840x2160, the screen mode it is made for; 'off' removes it), generate widescreen UI overrides
-# for -Aspect (default 16:9; use 4:3 to restore the original layout space), set the 4 GB large-address-aware
+# for -Aspect (default 16:9; use 4:3 to restore the original layout space), raise rendering
+# settings for -Graphics (default high; 'off' restores the game's defaults), set the 4 GB large-address-aware
 # flag and byte patches on AA.exe, mark AA.exe DPI-aware for the current user, install dgVoodoo2
 # (D3D9 -> D3D11) and stage DXVK.
 param(
@@ -13,6 +14,7 @@ param(
   [string]$DxvkVersion = '3.1.1',
   [string]$Aspect = '16:9',
   [string]$UiArt = '3840x2160',
+  [ValidateSet('high', 'off')][string]$Graphics = 'high',
   [string]$EsrganVersion = '0.2.5.0',
   [string]$EsrganBuild = '20220424',
   [switch]$SkipWrappers
@@ -79,6 +81,11 @@ if ($LASTEXITCODE) { throw 'upscale_ui.py failed' }
 Write-Host "== Widescreen UI ($Aspect)"
 python -I (Join-Path $repo 'tools\widescreen.py') $GameDir --aspect $Aspect
 if ($LASTEXITCODE) { throw 'widescreen.py failed' }
+
+Write-Host "== Rendering settings ($Graphics)"
+$gfxArgs = @(); if ($Graphics -eq 'off') { $gfxArgs = @('--off') }
+python -I (Join-Path $repo 'tools\graphics.py') $GameDir @gfxArgs
+if ($LASTEXITCODE) { throw 'graphics.py failed' }
 
 Write-Host '== Large-address-aware flag'
 python -I (Join-Path $repo 'tools\laa.py') $exe --set
