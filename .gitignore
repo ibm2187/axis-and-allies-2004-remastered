@@ -9,3 +9,4 @@ __pycache__/
 extract/
 .cache/
 logs/
+native/*/build/

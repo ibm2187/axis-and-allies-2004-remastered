@@ -1,6 +1,7 @@
 # Lighting engine: how the game lights the world, and the rewrite plan
 
-Status: research done, Phase 0 (instrumentation) in progress on branch `lighting-engine`.
+Status: research done. Phase 0 built (`native/AALight`, passes its smoke test through dgVoodoo2);
+waiting for the first in-game frame capture.
 
 ## Summary
 
