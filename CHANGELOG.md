@@ -15,6 +15,12 @@ All notable changes to Axis & Allies (2004) Remastered. The format follows
   HUD buttons (Soviet objectives and politics tabs, German pause button): flaws in the shipped
   button art, now cleared where the panel itself is transparent.
 
+### Changed
+- Unit banners and nation badges (the star, lion and unit-type logos over units and buildings) are
+  now in HD as well: they are drawn as planes of the banner model and take larger textures.
+- `Build-HdPack -Only Ui` / `-Only Textures` rebuilds just those parts of the pack (a UI-only
+  rebuild takes about 2 minutes instead of 15).
+
 HD pack 1.2 (release `hd-1.2`).
 
 ## [1.0.1] - 2026-10-11

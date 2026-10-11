@@ -4,6 +4,9 @@
 #
 #   Import-Module .\src\Remastered.psm1; Build-HdPack -GameDir 'C:\Games\Axis & Allies' -Version 1.0
 #
+# -Only Ui rebuilds the UI sets and icons, -Only Textures the 3D/terrain textures (re-encoding
+# them all with texconv is the slow part); the other parts are kept from the current hdpack.json.
+#
 # Output: .cache\hdpack\parts\*.zip (upload them as release assets under the tag hd-<Version>) and
 # src\Features\HdArt\hdpack.json (commit it).
 
@@ -25,17 +28,22 @@ function Build-HdPack {
   param(
     [Parameter(Mandatory)][string]$GameDir,
     [Parameter(Mandatory)][string]$Version,
-    [string]$BaseUrl = "https://github.com/ibm2187/axis-and-allies-2004-remastered/releases/download/hd-$Version"
+    [string]$BaseUrl = "https://github.com/ibm2187/axis-and-allies-2004-remastered/releases/download/hd-$Version",
+    [ValidateSet('All', 'Ui', 'Textures')][string]$Only = 'All'
   )
+  $kinds = switch ($Only) { 'Ui' { 'ui', 'icons' } 'Textures' { , 'textures' } default { 'textures', 'ui', 'icons' } }
   $modDir = Split-Path $PSScriptRoot -Parent | Split-Path -Parent | Split-Path -Parent
   $context = New-RemasteredContext -GameDir $GameDir -ModDir $modDir
   try {
+    $kept = @(Get-KeptHdPackParts $context $Version $kinds)
     $tools = Initialize-HdBuildTools $context
     $stage = Join-Path $context.CacheDir 'hdpack\stage'
-    foreach ($set in $script:HdUiSets) { Invoke-UiSetBuild $context $tools $set (Join-Path $stage "ui-$($set.Height)") }
-    Invoke-TextureBuild $context $tools (Join-Path $stage 'textures')
-    $parts = New-HdPackParts $context $stage $Version
-    Save-HdPackManifest $Version $BaseUrl $parts
+    if ('ui' -in $kinds) {
+      foreach ($set in $script:HdUiSets) { Invoke-UiSetBuild $context $tools $set (Join-Path $stage "ui-$($set.Height)") }
+    }
+    if ('textures' -in $kinds) { Invoke-TextureBuild $context $tools (Join-Path $stage 'textures') }
+    $built = @(New-HdPackParts $context $stage $Version $kinds)
+    Save-HdPackManifest $Version $BaseUrl (Sort-HdPackParts ($kept + $built))
   } finally { Close-RemasteredContext $context }
 }
 
@@ -84,27 +92,57 @@ function Invoke-BuildScript {
   if ($LASTEXITCODE) { throw "$Script failed (exit code $LASTEXITCODE)" }
 }
 
-# Zips the staged files into parts: textures (split by size), icons, and one per UI set.
+# Parts of the current hdpack.json that are not rebuilt: same version, zip still in the cache.
+function Get-KeptHdPackParts {
+  param([Parameter(Mandatory)]$Context, [Parameter(Mandatory)][string]$Version, [Parameter(Mandatory)][string[]]$Kinds)
+  $pack = Get-HdPack
+  foreach ($part in @($pack.parts | Where-Object { $_.kind -notin $Kinds })) {
+    $zip = Join-Path (Get-HdPackCacheDir $Context) $part.file
+    if ($pack.version -ne $Version -or -not (Test-Path -LiteralPath $zip)) {
+      throw "The $($part.kind) part of HD pack $Version is not built yet ($zip); build without -Only first."
+    }
+    Write-Detail "keeping $($part.file)"
+    $part
+  }
+}
+
+function Sort-HdPackParts {
+  param([Parameter(Mandatory)][object[]]$Parts)
+  $order = @{ textures = 0; ui = 1; icons = 2 }
+  $Parts | Sort-Object { $order[$_.kind] }, { Get-PartHeight $_ }, file
+}
+
+function Get-PartHeight {
+  param([Parameter(Mandatory)]$Part)
+  $height = $Part.PSObject.Properties['height']
+  if ($height) { [int]$height.Value } else { 0 }
+}
+
+# Zips the staged files of these kinds into parts: textures (split by size), icons, one per UI set.
 function New-HdPackParts {
-  param([Parameter(Mandatory)]$Context, [Parameter(Mandatory)][string]$Stage, [Parameter(Mandatory)][string]$Version)
+  param([Parameter(Mandatory)]$Context, [Parameter(Mandatory)][string]$Stage, [Parameter(Mandatory)][string]$Version,
+        [Parameter(Mandatory)][string[]]$Kinds)
   Write-Step 'Packing'
   $out = Get-HdPackCacheDir $Context
   New-Item -ItemType Directory -Force $out | Out-Null
-  Remove-Item "$out\*.zip" -ErrorAction SilentlyContinue
   $groups = @()
-  $textures = @(Get-StagedFiles (Join-Path $Stage 'textures'))
-  $groups += Split-BySize $textures | ForEach-Object -Begin { $n = 0 } -Process {
-    $n++; @{ Kind = 'textures'; Name = "textures-$n"; Files = $_ }
+  if ('textures' -in $Kinds) {
+    Remove-Item "$out\AA2004-Remastered-HD-$Version-textures-*.zip" -ErrorAction SilentlyContinue
+    $textures = @(Get-StagedFiles (Join-Path $Stage 'textures'))
+    $groups += Split-BySize $textures | ForEach-Object -Begin { $n = 0 } -Process {
+      $n++; @{ Kind = 'textures'; Name = "textures-$n"; Files = $_ }
+    }
   }
-  foreach ($set in $script:HdUiSets) {
+  if ('ui' -in $Kinds) { foreach ($set in $script:HdUiSets) {
     $files = @(Get-StagedFiles (Join-Path $Stage "ui-$($set.Height)"))
     $isSetFile = { param($f) $f.Relative -match "/$($set.Width)/" -or $f.Relative -like 'data/Cursors/*' }.GetNewClosure()
     $groups += @{ Kind = 'ui'; Name = "ui-$($set.Height)"; Height = $set.Height; Width = $set.Width; Files = @($files | Where-Object { & $isSetFile $_ }) }
     if ($set.Height -eq 2160) { $groups += @{ Kind = 'icons'; Name = 'icons'; Files = @($files | Where-Object { -not (& $isSetFile $_) }) } }
-  }
+  } }
   foreach ($group in $groups) {
     $file = "AA2004-Remastered-HD-$Version-$($group.Name).zip"
     $zip = Join-Path $out $file
+    Remove-Item -LiteralPath $zip -ErrorAction SilentlyContinue
     New-ZipFromFiles $zip $group.Files
     Write-Detail "$file : $($group.Files.Count) files, $([math]::Round((Get-Item $zip).Length / 1MB)) MB"
     $part = [ordered]@{ file = $file; kind = $group.Kind; files = $group.Files.Count; bytes = (Get-Item $zip).Length

@@ -49,10 +49,11 @@ INPLACE = ("properties/techicons/", "properties/propertyicons/", "properties/abi
 INPLACE_SKIP = re.compile(r"/(800|1024|1280)/|^ui/test/", re.I)
 # Textures the game uses at their exact pixel size. Larger command-grid frames gave sheared white
 # garbage over every button (seen with the original icons inside, so the frames alone do it);
-# larger minimap icons were drawn into the minimap pixel for pixel, big and white. Unit banners
-# combine an icon and a nation badge into one image, likely the same way. These keep the shipped art.
+# larger minimap icons were drawn into the minimap pixel for pixel, big and white. These keep the
+# shipped art. (Unit banners and nation badges are drawn as planes of the banner model and take HD
+# textures fine: tested in-game 2026-10-11. Formation icons are untested and stay.)
 FIXED_SIZE = re.compile(r"^(ui/game/sharedtextures/(button(un)?focused|buttonpressed|actionbuttonbordertargeted)\."
-                        r"|minimap/|organizations/|nations/[^/]+/[^/]*badge)", re.I)
+                        r"|minimap/|organizations/formations/)", re.I)
 
 
 def set_paths(data):
